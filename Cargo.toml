@@ -1,0 +1,11 @@
+[workspace]
+
+members = [
+    "spinoza",
+    "spinoza-py"
+]
+
+[profile.release]
+codegen-units = 1
+lto = true
+panic = "abort"

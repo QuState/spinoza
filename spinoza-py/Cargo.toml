@@ -1,0 +1,17 @@
+[package]
+name = "spinoza_py"
+version = "0.1.1"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "spinoza_py"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.18.3", features = ["extension-module", "abi3-py37"] }
+# use for m1
+#pyo3 = { version = "0.16.5", features = ["extension-module"] }
+# use for cross compiling to windows
+#pyo3 = { version = "0.16.5", features = ["extension-module", "abi3-py37", "generate-import-lib"] }
+spinoza = { path = "../spinoza" }

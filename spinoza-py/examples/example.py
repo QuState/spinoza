@@ -1,11 +1,8 @@
 import argparse
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
 from spinoza_py import QuantumRegister, QuantumCircuit, show_table
-
-plt.style.use("ggplot")
 
 
 def val_encoding(n, v):

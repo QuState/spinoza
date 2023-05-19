@@ -206,7 +206,7 @@ impl QuantumCircuit {
 
     #[inline]
     pub fn execute(&mut self) {
-        self.qc.execute()
+        self.qc.execute();
     }
 }
 

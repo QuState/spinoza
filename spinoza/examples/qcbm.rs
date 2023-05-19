@@ -16,7 +16,7 @@ pub fn qcbm_functional(n: usize, show_results: bool) {
         apply(Gate::RZ(1.0), &mut state, i);
     }
 
-    for i in 0..n - 1 {
+    for i in 0..n {
         let (p0, p1) = pairs[i];
         c_apply(Gate::X, &mut state, p0, p1);
     }
@@ -28,7 +28,7 @@ pub fn qcbm_functional(n: usize, show_results: bool) {
             apply(Gate::RZ(1.0), &mut state, i);
         }
 
-        for i in 0..n - 1 {
+        for i in 0..n {
             let (p0, p1) = pairs[i];
             c_apply(Gate::X, &mut state, p0, p1);
         }

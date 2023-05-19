@@ -38,21 +38,23 @@ pip install ../target/wheels/spinoza_py-*.whl
 import numpy as np
 from spinoza_py import QuantumCircuit, QuantumRegister, show_table
 
-def value_encoding(n, v):
+def val_encoding(n, v):
     q = QuantumRegister(n)
-    qc = QuantumCircuit([q])
+    qc = QuantumCircuit(q)
 
     for i in range(n):
         qc.h(i)
 
     for i in range(n):
-        qc.p(2 * pi / (2 ** (i + 1)) * v, i)
+        qc.p(2 * np.pi / (2 ** (i + 1)) * v, i)
 
     qc.iqft(range(n)[::-1])
-    state = qc.run()
-    return state
+
+    qc.execute()
+    return qc.get_statevector()
+
 
 if __name__ == "__main__":
-    state = value_encoding(7, 2.4)
+    state = value_encoding(4, 2.4)
     show_table(state)
 ```

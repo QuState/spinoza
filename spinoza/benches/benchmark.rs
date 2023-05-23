@@ -1,41 +1,61 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use rand::prelude::*;
 use spinoza::{
+    circuit::{QuantumCircuit, QuantumRegister},
     core::{iqft, State},
     gates::{apply, c_apply, Gate},
     math::{pow2f, Float, PI},
 };
 
-pub fn qcbm_functional(n: usize, pairs: &[(usize, usize)], rng: &mut ThreadRng) {
-    let mut state = State::new(n);
+fn first_rotation(circuit: &mut QuantumCircuit, nqubits: usize, angles: &mut Vec<Float>) {
+    for k in 0..nqubits {
+        circuit.rx(angles.pop().unwrap(), k);
+        circuit.rz(angles.pop().unwrap(), k);
+    }
+}
 
-    for i in 0..n {
-        apply(Gate::RX(rng.gen()), &mut state, i);
-        apply(Gate::RZ(rng.gen()), &mut state, i);
+fn mid_rotation(circuit: &mut QuantumCircuit, nqubits: usize, angles: &mut Vec<Float>) {
+    for k in 0..nqubits {
+        circuit.rz(angles.pop().unwrap(), k);
+        circuit.rx(angles.pop().unwrap(), k);
+        circuit.rz(angles.pop().unwrap(), k);
+    }
+}
+
+fn last_rotation(circuit: &mut QuantumCircuit, nqubits: usize, angles: &mut Vec<Float>) {
+    for k in 0..nqubits {
+        circuit.rz(angles.pop().unwrap(), k);
+        circuit.rx(angles.pop().unwrap(), k);
+    }
+}
+
+fn entangler(circuit: &mut QuantumCircuit, pairs: &[(usize, usize)]) {
+    for (a, b) in pairs.iter() {
+        circuit.cx(*a, *b);
+    }
+}
+
+fn build_circuit(nqubits: usize, depth: usize, pairs: &[(usize, usize)]) -> QuantumCircuit {
+    let mut rng = thread_rng();
+    let mut angles: Vec<_> = (0..(nqubits * 7) + (depth * nqubits * 5))
+        .map(|_| rng.gen())
+        .collect();
+
+    let mut q = QuantumRegister::new(nqubits);
+    let mut circuit = QuantumCircuit::new(&mut q);
+    first_rotation(&mut circuit, nqubits, &mut angles);
+    entangler(&mut circuit, pairs);
+    for _ in 0..depth {
+        mid_rotation(&mut circuit, nqubits, &mut angles);
+        entangler(&mut circuit, pairs);
     }
 
-    for i in 0..n {
-        let (p0, p1) = pairs[i];
-        c_apply(Gate::X, &mut state, p0, p1);
-    }
+    last_rotation(&mut circuit, nqubits, &mut angles);
+    circuit
+}
 
-    for _ in 0..9 {
-        for i in 0..n {
-            apply(Gate::RZ(rng.gen()), &mut state, i);
-            apply(Gate::RX(rng.gen()), &mut state, i);
-            apply(Gate::RZ(rng.gen()), &mut state, i);
-        }
-
-        for i in 0..n {
-            let (p0, p1) = pairs[i];
-            c_apply(Gate::X, &mut state, p0, p1);
-        }
-    }
-
-    for i in 0..n {
-        apply(Gate::RZ(rng.gen()), &mut state, i);
-        apply(Gate::RX(rng.gen()), &mut state, i);
-    }
+pub fn qcbm(circuit: &mut QuantumCircuit) {
+    circuit.execute();
 }
 
 fn value_encoding(n: usize, v: Float) {
@@ -125,10 +145,8 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function("rx", |b| b.iter(|| rx_gate(black_box(n))));
 
-    let mut rng = rand::thread_rng();
-    c.bench_function("qcbm", |b| {
-        b.iter(|| qcbm_functional(black_box(n), black_box(&pairs), black_box(&mut rng)))
-    });
+    let mut circuit = build_circuit(n, 9, &pairs);
+    c.bench_function("qcbm", |b| b.iter(|| qcbm(&mut circuit)));
 
     c.bench_function("p", |b| b.iter(|| p_gate(black_box(n))));
 

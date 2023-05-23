@@ -83,7 +83,7 @@ fn x_apply(state: &mut State, target: usize) {
     }
 }
 
-fn x_c_apply_to_range(state: &mut [Float], range: Range<usize>, control: usize, target: usize) {
+fn x_c_apply_to_range(state: &mut State, range: Range<usize>, control: usize, target: usize) {
     let dist = 1 << target;
     let marks = (target.min(control), target.max(control));
 
@@ -91,14 +91,16 @@ fn x_c_apply_to_range(state: &mut [Float], range: Range<usize>, control: usize, 
         let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
         let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
         let l0 = l1 - dist;
-        state.swap(l0, l1);
+        unsafe {
+            state.reals.swap_unchecked(l0, l1);
+            state.imags.swap_unchecked(l0, l1);
+        }
     }
 }
 
 fn x_c_apply(state: &mut State, control: usize, target: usize) {
     let end = state.len() >> 2;
-    x_c_apply_to_range(&mut state.reals, 0..end, control, target);
-    x_c_apply_to_range(&mut state.imags, 0..end, control, target);
+    x_c_apply_to_range(state, 0..end, control, target);
 }
 
 pub fn x_cc_apply(state: &mut State, control0: usize, control1: usize, target: usize) {
@@ -230,41 +232,41 @@ fn h_apply(state: &mut State, target: usize) {
     }
 }
 
-#[inline]
 fn rx_apply_target_0(state: &mut State, l: usize, cos: Float, neg_sin: Float) {
-    // a + ib
-    let a = state.reals[l];
-    let b = state.imags[l];
+    unsafe {
+        let a = *state.reals.get_unchecked(l);
+        let b = *state.imags.get_unchecked(l);
 
-    // c + id
-    let c = state.reals[l + 1];
-    let d = state.imags[l + 1];
+        // c + id
+        let c = *state.reals.get_unchecked(l + 1);
+        let d = *state.imags.get_unchecked(l + 1);
 
-    state.reals[l] = a * cos + d * (-neg_sin);
-    state.imags[l] = b * cos + c * neg_sin;
+        *state.reals.get_unchecked_mut(l) = a.mul_add(cos, d * -neg_sin);
+        *state.imags.get_unchecked_mut(l) = b.mul_add(cos, c * neg_sin);
 
-    state.reals[l + 1] = b * (-neg_sin) + c * cos;
-    state.imags[l + 1] = d * cos + a * neg_sin;
+        *state.reals.get_unchecked_mut(l + 1) = b.mul_add(-neg_sin, c * cos);
+        *state.imags.get_unchecked_mut(l + 1) = d.mul_add(cos, a * neg_sin);
+    }
 }
 
-#[inline]
 fn rx_apply_target(state: &mut State, l0: usize, l1: usize, cos: Float, neg_sin: Float) {
-    // a + ib
-    let a = state.reals[l0];
-    let b = state.imags[l0];
+    unsafe {
+        // a + ib
+        let a = *state.reals.get_unchecked(l0);
+        let b = *state.imags.get_unchecked(l0);
 
-    // c + id
-    let c = state.reals[l1];
-    let d = state.imags[l1];
+        // c + id
+        let c = *state.reals.get_unchecked(l1);
+        let d = *state.imags.get_unchecked(l1);
 
-    state.reals[l0] = a * cos + d * (-neg_sin);
-    state.imags[l0] = b * cos + c * neg_sin;
+        *state.reals.get_unchecked_mut(l0) = a.mul_add(cos, d * -neg_sin);
+        *state.imags.get_unchecked_mut(l0) = b.mul_add(cos, c * neg_sin);
 
-    state.reals[l1] = b * (-neg_sin) + c * cos;
-    state.imags[l1] = d * cos + a * neg_sin;
+        *state.reals.get_unchecked_mut(l1) = b.mul_add(-neg_sin, c * cos);
+        *state.imags.get_unchecked_mut(l1) = d.mul_add(cos, a * neg_sin);
+    }
 }
 
-#[inline]
 pub fn rx_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float, neg_sin: Float) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
@@ -371,12 +373,14 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
 }
 
 fn rz_apply_target(state: &mut State, i: usize, m: &Amplitude) {
-    // a + ib
-    let a = state.reals[i];
-    let b = state.imags[i];
+    unsafe {
+        // a + ib
+        let a = *state.reals.get_unchecked(i);
+        let b = *state.imags.get_unchecked(i);
 
-    state.reals[i] = a.mul_add(m.re, -b * m.im);
-    state.imags[i] = a.mul_add(m.im, b * m.re);
+        *state.reals.get_unchecked_mut(i) = a.mul_add(m.re, -b * m.im);
+        *state.imags.get_unchecked_mut(i) = a.mul_add(m.im, b * m.re);
+    }
 }
 
 fn rz_apply_strategy1(

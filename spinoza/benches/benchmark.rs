@@ -36,8 +36,8 @@ fn entangler(circuit: &mut QuantumCircuit, pairs: &[(usize, usize)]) {
 }
 
 fn build_circuit(nqubits: usize, depth: usize, pairs: &[(usize, usize)]) -> QuantumCircuit {
-    let mut rng = thread_rng();
-    let mut angles: Vec<_> = (0..(nqubits * 7) + (depth * nqubits * 5))
+    let mut rng = StdRng::seed_from_u64(42);
+    let mut angles: Vec<_> = (0..(nqubits * 2) + (depth * nqubits * 3) + (nqubits * 2))
         .map(|_| rng.gen())
         .collect();
 
@@ -157,5 +157,5 @@ fn criterion_benchmark(c: &mut Criterion) {
     });
 }
 
-criterion_group! {name = benches; config = Criterion::default().sample_size(10); targets = criterion_benchmark}
+criterion_group! {name = benches; config = Criterion::default().sample_size(50); targets = criterion_benchmark}
 criterion_main!(benches);

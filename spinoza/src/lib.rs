@@ -5,6 +5,7 @@
 #![warn(clippy::perf)]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![feature(slice_swap_unchecked)]
+#![feature(core_intrinsics)]
 
 pub mod circuit;
 pub mod config;

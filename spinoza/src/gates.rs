@@ -283,9 +283,11 @@ pub fn rx_apply(state: &mut State, target: usize, angle: Float) {
     let nst = -Float::sin(theta);
 
     if target == 0 {
-        (0..state.len())
-            .step_by(2)
-            .for_each(|l| rx_apply_target_0(state, l, ct, nst));
+        let mut l = 0;
+        while l < state.len() - 1 {
+            rx_apply_target_0(state, l, ct, nst);
+            l += 2;
+        }
     } else {
         let end = state.len() >> 1;
         let chunks = end >> target;
@@ -383,20 +385,15 @@ fn rz_apply_target(state: &mut State, i: usize, m: &Amplitude) {
     }
 }
 
-fn rz_apply_strategy1(
-    state: &mut State,
-    range: Range<usize>,
-    target: usize,
-    diag_matrix: &[Amplitude; 2],
-) {
-    let mut chunk_start = range.start;
+fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
+    let mut chunk_start = 0;
 
-    while chunk_start < range.end {
-        let chunk_end = range.end.min(((chunk_start >> target) + 1) << target);
+    while chunk_start < state.len() {
+        let chunk_end = state.len().min(((chunk_start >> target) + 1) << target);
 
-        let m = diag_matrix[(chunk_start >> target) & 1];
+        let m = unsafe { diag_matrix.get_unchecked((chunk_start >> target) & 1) };
         for i in chunk_start..chunk_end {
-            rz_apply_target(state, i, &m);
+            rz_apply_target(state, i, m);
         }
         chunk_start = chunk_end;
     }
@@ -410,7 +407,7 @@ fn rz_apply(state: &mut State, target: usize, angle: Float) {
     let d0 = Amplitude { re: c, im: -s };
     let d1 = Amplitude { re: c, im: s };
     let diag_matrix = [d0, d1];
-    rz_apply_strategy1(state, 0..state.len(), target, &diag_matrix);
+    rz_apply_strategy1(state, target, &diag_matrix);
 }
 
 fn z_proc_chunk(state: &mut State, chunk: usize, target: usize) {

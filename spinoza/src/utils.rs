@@ -146,7 +146,7 @@ pub fn balanced_ranges(
     let (q, r) = (total_count / b, total_count % b);
     let mut start: usize = 0;
 
-    (0..b).into_iter().map(move |i| {
+    (0..b).map(move |i| {
         let range = Range {
             start,
             end: start + q + if i < r { 1 } else { 0 },

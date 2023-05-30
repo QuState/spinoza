@@ -3,6 +3,7 @@ use crate::{
     math::{Amplitude, Float, SQRT_ONE_HALF},
 };
 use std::ops::Range;
+const UNROLL_FACTOR: usize = 4;
 
 #[derive(Clone, Copy)]
 pub enum Gate {
@@ -86,8 +87,24 @@ fn x_apply(state: &mut State, target: usize) {
 fn x_c_apply_to_range(state: &mut State, range: Range<usize>, control: usize, target: usize) {
     let dist = 1 << target;
     let marks = (target.min(control), target.max(control));
+    let mut k = range.start;
 
-    for i in range {
+    if range.len() >= UNROLL_FACTOR {
+        while k < range.end - (UNROLL_FACTOR - 1) {
+            for i in k..k + UNROLL_FACTOR {
+                let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+                let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+                let l0 = l1 - dist;
+                unsafe {
+                    state.reals.swap_unchecked(l0, l1);
+                    state.imags.swap_unchecked(l0, l1);
+                }
+            }
+            k += UNROLL_FACTOR;
+        }
+    }
+
+    for i in k..range.end {
         let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
         let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
         let l0 = l1 - dist;

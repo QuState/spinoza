@@ -88,11 +88,9 @@ fn rx_gate(n: usize) {
     }
 }
 
-fn rz_gate(n: usize) {
-    let mut state = State::new(n);
-
+fn rz_gate(state: &mut State, n: usize) {
     for i in 0..n {
-        apply(Gate::RZ(1.0), &mut state, i);
+        apply(Gate::RZ(1.0), state, i);
     }
 }
 
@@ -120,12 +118,10 @@ fn z_gate(n: usize) {
     }
 }
 
-fn cx_gate(n: usize, pairs: &[(usize, usize)]) {
-    let mut state = State::new(n);
-
+fn cx_gate(state: &mut State, n: usize, pairs: &[(usize, usize)]) {
     for i in 0..n {
         let (p0, p1) = pairs[i];
-        c_apply(Gate::X, &mut state, p0, p1);
+        c_apply(Gate::X, state, p0, p1);
     }
 }
 
@@ -136,12 +132,16 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     c.bench_function("x", |b| b.iter(|| x_gate(black_box(n))));
 
+    let mut state = State::new(n);
     let pairs: Vec<_> = (0..n).into_iter().map(|i| (i, (i + 1) % n)).collect();
     c.bench_function("cx", |b| {
-        b.iter(|| cx_gate(black_box(n), black_box(&pairs)))
+        b.iter(|| cx_gate(black_box(&mut state), black_box(n), black_box(&pairs)))
     });
 
-    c.bench_function("rz", |b| b.iter(|| rz_gate(black_box(n))));
+    let mut state = State::new(n);
+    c.bench_function("rz", |b| {
+        b.iter(|| rz_gate(black_box(&mut state), black_box(n)))
+    });
 
     c.bench_function("rx", |b| b.iter(|| rx_gate(black_box(n))));
 

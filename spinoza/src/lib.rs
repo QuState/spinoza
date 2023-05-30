@@ -1,4 +1,5 @@
 #![warn(clippy::complexity)]
+#![warn(missing_docs)]
 #![warn(clippy::style)]
 #![warn(clippy::correctness)]
 #![warn(clippy::suspicious)]

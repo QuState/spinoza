@@ -67,7 +67,7 @@ impl Reservoir {
 
     pub fn sampling(&mut self, reals: &[Float], imags: &[Float], m: usize) {
         let mut rng = thread_rng();
-        let mut outcomes = (0..reals.len()).into_iter().cycle();
+        let mut outcomes = (0..reals.len()).cycle();
 
         for _ in 0..m {
             let outcome = outcomes.next().unwrap(); // aka the index

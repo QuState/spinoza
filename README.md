@@ -6,6 +6,12 @@
 
 [Rust](https://www.rust-lang.org/learn/get-started)
 
+[nightly Rust](https://rust-lang.github.io/rustup/concepts/channels.html)
+```bash
+rustup toolchain install nightly
+rustup default nightly
+```
+
 ### Building on *nix
 
 #### Develoment

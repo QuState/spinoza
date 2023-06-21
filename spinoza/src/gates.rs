@@ -78,27 +78,21 @@ pub fn cc_apply(gate: Gate, state: &mut State, control0: usize, control1: usize,
     }
 }
 
-fn x_apply_target_0(state_re: SendPtr<*mut Float>, state_im: SendPtr<*mut Float>, l0: usize) {
-    std::ptr::swap(state_re.get().add(l0), state_re.get().add(l0 + 1));
-    std::ptr::swap(state_im.get().add(l0), state_im.get().add(l0 + 1));
+fn x_apply_target_0(state_re: SendPtr<Float>, state_im: SendPtr<Float>, l0: usize) {
+    unsafe {
+        std::ptr::swap(state_re.get().add(l0), state_re.get().add(l0 + 1));
+        std::ptr::swap(state_im.get().add(l0), state_im.get().add(l0 + 1));
+    }
 }
 
-fn x_apply_target(
-    state_re: SendPtr<*mut Float>,
-    state_im: SendPtr<*mut Float>,
-    l0: usize,
-    l1: usize,
-) {
-    std::ptr::swap(state_re.get().add(l0), state_re.get().add(l1));
-    std::ptr::swap(state_im.get().add(l0), state_im.get().add(l1));
+fn x_apply_target(state_re: SendPtr<Float>, state_im: SendPtr<Float>, l0: usize, l1: usize) {
+    unsafe {
+        std::ptr::swap(state_re.get().add(l0), state_re.get().add(l1));
+        std::ptr::swap(state_im.get().add(l0), state_im.get().add(l1));
+    }
 }
 
-fn x_proc_chunk(
-    state_re: SendPtr<*mut Float>,
-    state_im: SendPtr<*mut Float>,
-    chunk: usize,
-    target: usize,
-) {
+fn x_proc_chunk(state_re: SendPtr<Float>, state_im: SendPtr<Float>, chunk: usize, target: usize) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {
@@ -109,27 +103,30 @@ fn x_proc_chunk(
 }
 
 fn x_apply(state: &mut State, target: usize) {
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
     if target == 0 {
         if Config::global().threads < 2 {
             (0..state.len()).step_by(2).for_each(|l0| {
-                x_apply_target_0(state, l0);
+                x_apply_target_0(state_re, state_im, l0);
             });
         } else {
-            (0..state.len()).into_par_iter().for_each(|l0| {});
+            (0..state.len()).into_par_iter().for_each(|l0| {
+                x_apply_target_0(state_re, state_im, l0);
+            });
         }
     } else {
         let end = state.len() >> 1;
         let chunks = end >> target;
 
-        if Config::global().threads > 1 {
-            let state_re_ptr = SendPtr(state.reals.as_mut_ptr());
-            let state_im_ptr = SendPtr(state.imags.as_mut_ptr());
+        if Config::global().threads < 2 {
             (0..chunks).into_par_iter().for_each(|chunk| {
-                x_proc_chunk(state_ptr, chunk, target);
+                x_proc_chunk(state_re, state_im, chunk, target);
             });
         } else {
             (0..chunks).for_each(|chunk| {
-                x_proc_chunk(state, chunk, target);
+                x_proc_chunk(state_re, state_im, chunk, target);
             });
         }
     }

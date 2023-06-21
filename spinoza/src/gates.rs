@@ -1,9 +1,37 @@
 use crate::{
+    config::Config,
     core::State,
     math::{Amplitude, Float, SQRT_ONE_HALF},
 };
+use rayon::prelude::*;
 use std::ops::Range;
 const UNROLL_FACTOR: usize = 4;
+
+// https://github.com/rayon-rs/rayon/blob/master/src/lib.rs
+struct SendPtr<T>(*mut T);
+
+// SAFETY: !Send for raw pointers is not for safety, just as a lint
+unsafe impl<T: Send> Send for SendPtr<T> {}
+
+// SAFETY: !Sync for raw pointers is not for safety, just as a lint
+unsafe impl<T: Send> Sync for SendPtr<T> {}
+
+impl<T> SendPtr<T> {
+    // Helper to avoid disjoint captures of `send_ptr.0`
+    fn get(self) -> *mut T {
+        self.0
+    }
+}
+
+// Implement Clone without the T: Clone bound from the derive
+impl<T> Clone for SendPtr<T> {
+    fn clone(&self) -> Self {
+        Self(self.0)
+    }
+}
+
+// Implement Copy without the T: Copy bound from the derive
+impl<T> Copy for SendPtr<T> {}
 
 #[derive(Clone, Copy)]
 pub enum Gate {
@@ -50,37 +78,60 @@ pub fn cc_apply(gate: Gate, state: &mut State, control0: usize, control1: usize,
     }
 }
 
-fn x_apply_target_0(state: &mut State, l0: usize) {
-    state.reals.swap(l0, l0 + 1);
-    state.imags.swap(l0, l0 + 1);
+fn x_apply_target_0(state_re: SendPtr<*mut Float>, state_im: SendPtr<*mut Float>, l0: usize) {
+    std::ptr::swap(state_re.get().add(l0), state_re.get().add(l0 + 1));
+    std::ptr::swap(state_im.get().add(l0), state_im.get().add(l0 + 1));
 }
 
-fn x_apply_target(state: &mut State, l0: usize, l1: usize) {
-    state.reals.swap(l0, l1);
-    state.imags.swap(l0, l1);
+fn x_apply_target(
+    state_re: SendPtr<*mut Float>,
+    state_im: SendPtr<*mut Float>,
+    l0: usize,
+    l1: usize,
+) {
+    std::ptr::swap(state_re.get().add(l0), state_re.get().add(l1));
+    std::ptr::swap(state_im.get().add(l0), state_im.get().add(l1));
 }
 
-fn x_proc_chunk(state: &mut State, chunk: usize, target: usize) {
+fn x_proc_chunk(
+    state_re: SendPtr<*mut Float>,
+    state_im: SendPtr<*mut Float>,
+    chunk: usize,
+    target: usize,
+) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {
         let l0 = base + i;
         let l1 = l0 + dist;
-        x_apply_target(state, l0, l1)
+        x_apply_target(state_re, state_im, l0, l1)
     }
 }
 
 fn x_apply(state: &mut State, target: usize) {
     if target == 0 {
-        (0..state.len()).step_by(2).for_each(|l0| {
-            x_apply_target_0(state, l0);
-        });
+        if Config::global().threads < 2 {
+            (0..state.len()).step_by(2).for_each(|l0| {
+                x_apply_target_0(state, l0);
+            });
+        } else {
+            (0..state.len()).into_par_iter().for_each(|l0| {});
+        }
     } else {
         let end = state.len() >> 1;
         let chunks = end >> target;
-        (0..chunks).for_each(|chunk| {
-            x_proc_chunk(state, chunk, target);
-        });
+
+        if Config::global().threads > 1 {
+            let state_re_ptr = SendPtr(state.reals.as_mut_ptr());
+            let state_im_ptr = SendPtr(state.imags.as_mut_ptr());
+            (0..chunks).into_par_iter().for_each(|chunk| {
+                x_proc_chunk(state_ptr, chunk, target);
+            });
+        } else {
+            (0..chunks).for_each(|chunk| {
+                x_proc_chunk(state, chunk, target);
+            });
+        }
     }
 }
 

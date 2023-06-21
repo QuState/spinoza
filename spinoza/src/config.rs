@@ -3,8 +3,11 @@ use clap::Parser;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Config {
+    pub threads: u32, // If a larger data type is needed, that's just wild
     pub print: bool,
-    pub qubits: u8,
+    pub qubits: u8, // State vector size is 2^{n}, where n is the # of qubits. Assuming single
+                    // precision complex numbers, the upper bound with u8 is 2^255 * 64 bit ≈
+                    // 4.632 * 10^{65} TB (terabytes). Thus, using u8 suffices.
 }
 
 impl Config {
@@ -14,6 +17,7 @@ impl Config {
 
     pub const fn from_cli(args: QSArgs) -> Config {
         Config {
+            threads: args.threads,
             qubits: args.qubits,
             print: args.print,
         }
@@ -21,6 +25,7 @@ impl Config {
 
     pub const fn benchmark() -> Config {
         Config {
+            threads: 1,
             qubits: 25,
             print: false,
         }
@@ -28,6 +33,7 @@ impl Config {
 
     pub const fn test() -> Config {
         Config {
+            threads: 1,
             qubits: 25,
             print: false,
         }
@@ -36,6 +42,8 @@ impl Config {
 
 #[derive(Parser, Debug)]
 pub struct QSArgs {
+    #[clap(short, long)]
+    threads: u32,
     #[clap(short, long)]
     print: bool,
     #[clap(short, long)]

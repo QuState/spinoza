@@ -5,7 +5,6 @@ use crate::{
 };
 use rayon::prelude::*;
 use std::ops::Range;
-const UNROLL_FACTOR: usize = 4;
 
 // https://github.com/rayon-rs/rayon/blob/master/src/lib.rs
 struct SendPtr<T>(*mut T);
@@ -46,6 +45,7 @@ pub enum Gate {
     U((Float, Float, Float)),
 }
 
+/// Single Target, No Controls
 pub fn apply(gate: Gate, state: &mut State, target: usize) {
     match gate {
         Gate::H => h_apply(state, target),
@@ -60,6 +60,7 @@ pub fn apply(gate: Gate, state: &mut State, target: usize) {
     }
 }
 
+/// Single Control, Single Target
 pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
     match gate {
         Gate::X => x_c_apply(state, control, target),
@@ -71,6 +72,7 @@ pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
     }
 }
 
+/// Two Controls, Single Target
 pub fn cc_apply(gate: Gate, state: &mut State, control0: usize, control1: usize, target: usize) {
     match gate {
         Gate::X => x_cc_apply(state, control0, control1, target),
@@ -112,7 +114,7 @@ fn x_apply(state: &mut State, target: usize) {
                 x_apply_target_0(state_re, state_im, l0);
             });
         } else {
-            (0..state.len()).into_par_iter().for_each(|l0| {
+            (0..state.len()).into_par_iter().step_by(2).for_each(|l0| {
                 x_apply_target_0(state_re, state_im, l0);
             });
         }
@@ -121,54 +123,43 @@ fn x_apply(state: &mut State, target: usize) {
         let chunks = end >> target;
 
         if Config::global().threads < 2 {
-            (0..chunks).into_par_iter().for_each(|chunk| {
-                x_proc_chunk(state_re, state_im, chunk, target);
-            });
-        } else {
             (0..chunks).for_each(|chunk| {
                 x_proc_chunk(state_re, state_im, chunk, target);
             });
-        }
-    }
-}
-
-fn x_c_apply_to_range(state: &mut State, range: Range<usize>, control: usize, target: usize) {
-    let dist = 1 << target;
-    let marks = (target.min(control), target.max(control));
-    let mut k = range.start;
-
-    if range.len() >= UNROLL_FACTOR {
-        while k < range.end - (UNROLL_FACTOR - 1) {
-            for i in k..k + UNROLL_FACTOR {
-                let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-                let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-                let l0 = l1 - dist;
-                unsafe {
-                    state.reals.swap_unchecked(l0, l1);
-                    state.imags.swap_unchecked(l0, l1);
-                }
-            }
-            k += UNROLL_FACTOR;
-        }
-    }
-
-    for i in k..range.end {
-        let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-        let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-        let l0 = l1 - dist;
-        unsafe {
-            state.reals.swap_unchecked(l0, l1);
-            state.imags.swap_unchecked(l0, l1);
+        } else {
+            (0..chunks).into_par_iter().for_each(|chunk| {
+                x_proc_chunk(state_re, state_im, chunk, target);
+            });
         }
     }
 }
 
 fn x_c_apply(state: &mut State, control: usize, target: usize) {
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
     let end = state.len() >> 2;
-    x_c_apply_to_range(state, 0..end, control, target);
+    let dist = 1 << target;
+    let marks = (target.min(control), target.max(control));
+
+    if Config::global().threads < 2 {
+        (0..end).for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let l0 = l1 - dist;
+            x_apply_target(state_re, state_im, l0, l1);
+        });
+    } else {
+        (0..end).into_par_iter().for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let l0 = l1 - dist;
+            x_apply_target(state_re, state_im, l0, l1);
+        });
+    }
 }
 
-pub fn x_cc_apply(state: &mut State, control0: usize, control1: usize, target: usize) {
+fn x_cc_apply(state: &mut State, control0: usize, control1: usize, target: usize) {
     let mut i = 0;
     let dist = 1 << target;
 
@@ -297,96 +288,132 @@ fn h_apply(state: &mut State, target: usize) {
     }
 }
 
-fn rx_apply_target_0(state: &mut State, l: usize, cos: Float, neg_sin: Float) {
-    unsafe {
-        let a = *state.reals.get_unchecked(l);
-        let b = *state.imags.get_unchecked(l);
-
-        // c + id
-        let c = *state.reals.get_unchecked(l + 1);
-        let d = *state.imags.get_unchecked(l + 1);
-
-        *state.reals.get_unchecked_mut(l) = a.mul_add(cos, d * -neg_sin);
-        *state.imags.get_unchecked_mut(l) = b.mul_add(cos, c * neg_sin);
-
-        *state.reals.get_unchecked_mut(l + 1) = b.mul_add(-neg_sin, c * cos);
-        *state.imags.get_unchecked_mut(l + 1) = d.mul_add(cos, a * neg_sin);
-    }
-}
-
-fn rx_apply_target(state: &mut State, l0: usize, l1: usize, cos: Float, neg_sin: Float) {
+fn rx_apply_target_0(
+    state_re: SendPtr<Float>,
+    state_im: SendPtr<Float>,
+    l: usize,
+    cos: Float,
+    neg_sin: Float,
+) {
     unsafe {
         // a + ib
-        let a = *state.reals.get_unchecked(l0);
-        let b = *state.imags.get_unchecked(l0);
+        let a = *state_re.get().add(l);
+        let b = *state_im.get().add(l);
 
         // c + id
-        let c = *state.reals.get_unchecked(l1);
-        let d = *state.imags.get_unchecked(l1);
+        let c = *state_re.get().add(l + 1);
+        let d = *state_im.get().add(l + 1);
 
-        *state.reals.get_unchecked_mut(l0) = a.mul_add(cos, d * -neg_sin);
-        *state.imags.get_unchecked_mut(l0) = b.mul_add(cos, c * neg_sin);
+        *state_re.get().add(l) = a.mul_add(cos, d * -neg_sin);
+        *state_im.get().add(l) = b.mul_add(cos, c * neg_sin);
 
-        *state.reals.get_unchecked_mut(l1) = b.mul_add(-neg_sin, c * cos);
-        *state.imags.get_unchecked_mut(l1) = d.mul_add(cos, a * neg_sin);
+        *state_re.get().add(l + 1) = b.mul_add(-neg_sin, c * cos);
+        *state_im.get().add(l + 1) = d.mul_add(cos, a * neg_sin);
     }
 }
 
-pub fn rx_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float, neg_sin: Float) {
-    let dist = 1 << target;
-    let base = (2 * chunk) << target;
-    for i in 0..dist {
-        let l0 = base + i;
-        let l1 = l0 + dist;
-        rx_apply_target(state, l0, l1, cos, neg_sin);
+fn rx_apply_target(
+    state_re: SendPtr<Float>,
+    state_im: SendPtr<Float>,
+    l0: usize,
+    l1: usize,
+    cos: Float,
+    neg_sin: Float,
+) {
+    unsafe {
+        // a + ib
+        let a = *state_re.get().add(l0);
+        let b = *state_im.get().add(l0);
+
+        // c + id
+        let c = *state_re.get().add(l1);
+        let d = *state_im.get().add(l1);
+
+        *state_re.get().add(l0) = a.mul_add(cos, d * -neg_sin);
+        *state_im.get().add(l0) = b.mul_add(cos, c * neg_sin);
+
+        *state_re.get().add(l1) = b.mul_add(-neg_sin, c * cos);
+        *state_im.get().add(l1) = d.mul_add(cos, a * neg_sin);
     }
 }
 
-pub fn rx_apply(state: &mut State, target: usize, angle: Float) {
-    let theta = angle * 0.5;
-    let ct = Float::cos(theta);
-    let nst = -Float::sin(theta);
-
-    if target == 0 {
-        let mut l = 0;
-        while l < state.len() - 1 {
-            rx_apply_target_0(state, l, ct, nst);
-            l += 2;
-        }
-    } else {
-        let end = state.len() >> 1;
-        let chunks = end >> target;
-        (0..chunks).for_each(|chunk| {
-            rx_proc_chunk(state, chunk, target, ct, nst);
-        });
-    }
-}
-
-fn rx_c_apply_to_range(
-    state: &mut State,
-    range: Range<usize>,
-    control: usize,
+fn rx_proc_chunk(
+    state_re: SendPtr<Float>,
+    state_im: SendPtr<Float>,
+    chunk: usize,
     target: usize,
     cos: Float,
     neg_sin: Float,
 ) {
     let dist = 1 << target;
-    let marks = (target.min(control), target.max(control));
+    let base = (2 * chunk) << target;
+    for i in 0..dist {
+        let l0 = base + i;
+        let l1 = l0 + dist;
+        rx_apply_target(state_re, state_im, l0, l1, cos, neg_sin);
+    }
+}
 
-    for i in range {
-        let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-        let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-        let l0 = l1 - dist;
-        rx_apply_target(state, l0, l1, cos, neg_sin);
+fn rx_apply(state: &mut State, target: usize, angle: Float) {
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
+    let theta = angle * 0.5;
+    let ct = Float::cos(theta);
+    let nst = -Float::sin(theta);
+
+    if target == 0 {
+        if Config::global().threads < 2 {
+            (0..state.len()).step_by(2).for_each(|l| {
+                rx_apply_target_0(state_re, state_im, l, ct, nst);
+            })
+        } else {
+            (0..state.len()).into_par_iter().step_by(2).for_each(|l| {
+                rx_apply_target_0(state_re, state_im, l, ct, nst);
+            })
+        }
+    } else {
+        let end = state.len() >> 1;
+        let chunks = end >> target;
+        if Config::global().threads < 2 {
+            (0..chunks).for_each(|chunk| {
+                rx_proc_chunk(state_re, state_im, chunk, target, ct, nst);
+            });
+        } else {
+            (0..chunks).into_par_iter().for_each(|chunk| {
+                rx_proc_chunk(state_re, state_im, chunk, target, ct, nst);
+            });
+        }
     }
 }
 
 fn rx_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
     let theta = angle * 0.5;
     let ct = Float::cos(theta);
     let nst = -Float::sin(theta);
     let end = state.len() >> 2;
-    rx_c_apply_to_range(state, 0..end, control, target, ct, nst);
+
+    let dist = 1 << target;
+    let marks = (target.min(control), target.max(control));
+
+    if Config::global().threads < 2 {
+        (0..end).for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let l0 = l1 - dist;
+            rx_apply_target(state_re, state_im, l0, l1, ct, nst);
+        });
+    } else {
+        (0..end).into_par_iter().for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let l0 = l1 - dist;
+            rx_apply_target(state_re, state_im, l0, l1, ct, nst);
+        });
+    }
 }
 
 fn p_apply_target(state: &mut State, l1: usize, cos: Float, sin: Float) {
@@ -603,7 +630,7 @@ fn u_apply_target(state: &mut State, g: &[Amplitude], l0: usize, l1: usize) {
     state.imags[l1] = q.mul_add(d, r.mul_add(c, s.mul_add(n, t * m)));
 }
 
-pub fn u_apply_strategy2(state: &mut State, g: &[Amplitude], chunk: usize, target: usize) {
+fn u_apply_strategy2(state: &mut State, g: &[Amplitude], chunk: usize, target: usize) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {

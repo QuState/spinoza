@@ -16,6 +16,7 @@ impl Config {
     }
 
     pub const fn from_cli(args: QSArgs) -> Config {
+        assert!(args.threads > 0 && args.qubits > 0);
         Config {
             threads: args.threads,
             qubits: args.qubits,
@@ -33,7 +34,7 @@ impl Config {
 
     pub const fn test() -> Config {
         Config {
-            threads: 1,
+            threads: 14,
             qubits: 25,
             print: false,
         }

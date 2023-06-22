@@ -483,31 +483,26 @@ fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude
 
     let chunk_size = 1 << target;
     let num_chunks = state.len() / chunk_size;
-    let mut chunks = Vec::with_capacity(num_chunks);
+    let mut chunk_start: usize = 0;
 
-    let mut chunk_start = 0;
-
-    while chunk_start < state.len() {
+    let chunks = (0..num_chunks).map(|_| {
         let chunk_end = state.len().min(((chunk_start >> target) + 1) << target);
-        chunks.push(chunk_start..chunk_end);
+        let range = chunk_start..chunk_end;
         chunk_start = chunk_end;
-    }
+        range
+    });
 
     if Config::global().threads < 2 {
-        chunks.iter().for_each(|c| {
-            let (chunk_start, chunk_end) = (c.start, c.end);
-
-            let m = unsafe { diag_matrix.get_unchecked((chunk_start >> target) & 1) };
-            for i in chunk_start..chunk_end {
+        chunks.for_each(|chunk| {
+            let m = unsafe { diag_matrix.get_unchecked((chunk.start >> target) & 1) };
+            for i in chunk {
                 rz_apply_target(state_re, state_im, i, m);
             }
         });
     } else {
-        chunks.par_iter().for_each(|c| {
-            let (chunk_start, chunk_end) = (c.start, c.end);
-
-            let m = unsafe { diag_matrix.get_unchecked((chunk_start >> target) & 1) };
-            for i in chunk_start..chunk_end {
+        chunks.par_bridge().for_each(|chunk| {
+            let m = unsafe { diag_matrix.get_unchecked((chunk.start >> target) & 1) };
+            for i in chunk {
                 rz_apply_target(state_re, state_im, i, m);
             }
         });

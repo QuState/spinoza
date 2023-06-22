@@ -304,11 +304,11 @@ fn rx_apply_target_0(
         let c = *state_re.get().add(l + 1);
         let d = *state_im.get().add(l + 1);
 
-        *state_re.get().add(l) = a.mul_add(cos, d * -neg_sin);
-        *state_im.get().add(l) = b.mul_add(cos, c * neg_sin);
+        *state_re.get().add(l) = a * cos - d * neg_sin;
+        *state_im.get().add(l) = b * cos + c * neg_sin;
 
-        *state_re.get().add(l + 1) = b.mul_add(-neg_sin, c * cos);
-        *state_im.get().add(l + 1) = d.mul_add(cos, a * neg_sin);
+        *state_re.get().add(l + 1) = b * -neg_sin + c * cos;
+        *state_im.get().add(l + 1) = d * cos + a * neg_sin;
     }
 }
 
@@ -329,11 +329,11 @@ fn rx_apply_target(
         let c = *state_re.get().add(l1);
         let d = *state_im.get().add(l1);
 
-        *state_re.get().add(l0) = a.mul_add(cos, d * -neg_sin);
-        *state_im.get().add(l0) = b.mul_add(cos, c * neg_sin);
+        *state_re.get().add(l0) = a * cos - d * neg_sin;
+        *state_im.get().add(l0) = b * cos + c * neg_sin;
 
-        *state_re.get().add(l1) = b.mul_add(-neg_sin, c * cos);
-        *state_im.get().add(l1) = d.mul_add(cos, a * neg_sin);
+        *state_re.get().add(l1) = b * -neg_sin + c * cos;
+        *state_im.get().add(l1) = d * cos + a * neg_sin;
     }
 }
 

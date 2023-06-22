@@ -493,14 +493,25 @@ fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude
         chunk_start = chunk_end;
     }
 
-    chunks.par_iter().for_each(|c| {
-        let (chunk_start, chunk_end) = (c.start, c.end);
+    if Config::global().threads < 2 {
+        chunks.iter().for_each(|c| {
+            let (chunk_start, chunk_end) = (c.start, c.end);
 
-        let m = unsafe { diag_matrix.get_unchecked((chunk_start >> target) & 1) };
-        for i in chunk_start..chunk_end {
-            rz_apply_target(state_re, state_im, i, m);
-        }
-    });
+            let m = unsafe { diag_matrix.get_unchecked((chunk_start >> target) & 1) };
+            for i in chunk_start..chunk_end {
+                rz_apply_target(state_re, state_im, i, m);
+            }
+        });
+    } else {
+        chunks.par_iter().for_each(|c| {
+            let (chunk_start, chunk_end) = (c.start, c.end);
+
+            let m = unsafe { diag_matrix.get_unchecked((chunk_start >> target) & 1) };
+            for i in chunk_start..chunk_end {
+                rz_apply_target(state_re, state_im, i, m);
+            }
+        });
+    }
 }
 
 // NOTE: since we are checking pairs, rather than generating, we need to go through the *entire*

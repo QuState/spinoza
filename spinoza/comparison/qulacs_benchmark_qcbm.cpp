@@ -72,7 +72,6 @@ void benchmark_qcbm(int n) {
 }
 
 void benchmark_qcbm_functional(int n) {
-    auto t1 = high_resolution_clock::now();
     QuantumState state(n);
     state.set_zero_state();
 
@@ -82,12 +81,14 @@ void benchmark_qcbm_functional(int n) {
         pairs.push_back(p);
     }
 
+    auto t1 = high_resolution_clock::now();
+
     for (int i = 0; i < n; i++) {
         gate::to_matrix_gate(gate::RX(i, 1.0))->update_quantum_state(&state);
         gate::to_matrix_gate(gate::RZ(i, 1.0))->update_quantum_state(&state);
     }
 
-    for (int i = 0; i < n - 1; i++) {
+    for (int i = 0; i < n; i++) {
         auto p = pairs[i];
         auto p0 = std::get<0>(p);
         auto p1 = std::get<1>(p);
@@ -104,7 +105,7 @@ void benchmark_qcbm_functional(int n) {
             gate::to_matrix_gate(gate::RZ(i, 1.0))->update_quantum_state(&state);
         }
 
-        for (int i = 0; i < n - 1; i++) {
+        for (int i = 0; i < n; i++) {
             auto p = pairs[i];
             auto p0 = std::get<0>(p);
             auto p1 = std::get<1>(p);

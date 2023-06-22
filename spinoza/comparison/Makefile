@@ -43,12 +43,9 @@ qcbm: utils.h
 value_encoding: utils.h
 	$(CXX) $(CXXFLAGS) qulacs_benchmark_value_encoding.cpp -o qulacs_benchmark_value_encoding $(LDLIBS) $(LDFLAGS)
 
-pairs: utils.h
-	$(CXX) $(CXXFLAGS) openmp_pairs.cpp -o openmp_pairs -fopenmp
-
 .PHONY: clean
 clean:
-	$(RM) qulacs_benchmark_{rz,rx,ry,x,h,p,z,qcbm,value_encoding,openmp_pairs}
+	$(RM) qulacs_benchmark_{rz,rx,ry,x,h,p,z,qcbm,value_encoding}
 
 .PHONY: all
-all: clean rz rx ry x h p z qcbm value_encoding pairs
+all: clean rz rx ry x h p z qcbm value_encoding

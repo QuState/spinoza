@@ -478,35 +478,66 @@ fn rz_apply_target(state_re: SendPtr<Float>, state_im: SendPtr<Float>, i: usize,
 }
 
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
-    let state_re = SendPtr(state.reals.as_mut_ptr());
-    let state_im = SendPtr(state.imags.as_mut_ptr());
-
-    let chunk_size = 1 << target;
-    let num_chunks = state.len() / chunk_size;
-    let mut chunk_start: usize = 0;
-
-    let chunks = (0..num_chunks).map(|_| {
-        let chunk_end = state.len().min(((chunk_start >> target) + 1) << target);
-        let range = chunk_start..chunk_end;
-        chunk_start = chunk_end;
-        range
-    });
+    let chunk_size = 1 << target; // 2^{t}
+    let num_chunks = state.len() / chunk_size; // 2^{n} / 2^{t} == 2^{n-t}
 
     if Config::global().threads < 2 {
-        chunks.for_each(|chunk| {
-            let m = unsafe { diag_matrix.get_unchecked((chunk.start >> target) & 1) };
-            for i in chunk {
-                rz_apply_target(state_re, state_im, i, m);
-            }
-        });
+        state
+            .reals
+            .chunks_exact_mut(num_chunks)
+            .zip(state.imags.chunks_exact_mut(num_chunks))
+            .enumerate()
+            .for_each(|(i, (c0, c1))| {
+                c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
+                    let m = diag_matrix[i & 1];
+                    let c = *a;
+                    let d = *b;
+
+                    *a = c * m.re - d * m.im;
+                    *b = c * m.im + d * m.re;
+                });
+            });
     } else {
-        chunks.par_bridge().for_each(|chunk| {
-            let m = unsafe { diag_matrix.get_unchecked((chunk.start >> target) & 1) };
-            for i in chunk {
-                rz_apply_target(state_re, state_im, i, m);
-            }
-        });
+        state
+            .reals
+            .par_chunks_exact_mut(num_chunks)
+            .zip(state.imags.par_chunks_exact_mut(num_chunks))
+            .enumerate()
+            .with_min_len(1 << 11)
+            .for_each(|(i, (c0, c1))| {
+                c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
+                    let m = diag_matrix[i & 1];
+                    let c = *a;
+                    let d = *b;
+
+                    *a = c * m.re - d * m.im;
+                    *b = c * m.im + d * m.re;
+                });
+            });
     }
+
+    // let chunks = (0..num_chunks).map(|_| {
+    //     let chunk_end = state.len().min(((chunk_start >> target) + 1) << target);
+    //     let range = chunk_start..chunk_end;
+    //     chunk_start = chunk_end;
+    //     range
+    // });
+
+    // if Config::global().threads < 2 {
+    //     chunks.for_each(|chunk| {
+    //         let m = unsafe { diag_matrix.get_unchecked((chunk.start >> target) & 1) };
+    //         for i in chunk {
+    //             rz_apply_target(state_re, state_im, i, m);
+    //         }
+    //     });
+    // } else {
+    //     chunks.par_bridge().for_each(|chunk| {
+    //         let m = unsafe { diag_matrix.get_unchecked((chunk.start >> target) & 1) };
+    //         for i in chunk {
+    //             rz_apply_target(state_re, state_im, i, m);
+    //         }
+    //     });
+    // }
 }
 
 // NOTE: since we are checking pairs, rather than generating, we need to go through the *entire*

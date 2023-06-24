@@ -20,19 +20,17 @@ void rz(int n) {
     auto t1 = high_resolution_clock::now();
     QuantumState state(n);
     state.set_zero_state();
-
-    for (int i = 0; i < n; i++) {
-        gate::to_matrix_gate(gate::RZ(i, 1.0))->update_quantum_state(&state);
-    }
-
     auto t2 = high_resolution_clock::now();
     auto us_int = duration_cast<microseconds>(t2 - t1);
-    std::cout << FormatWithCommas(us_int.count()) << "\n";
+    std::cout << "created state of " << n << " qubits in "<< FormatWithCommas(us_int.count()) << " us" << "\n";
 
-    // const CPPCTYPE* raw_data_cpp = state.data_cpp();
-    // for (int i = 0; i < std::min(16, (1 << n)); i++) {
-    //     std::cout << raw_data_cpp[i] << std::endl;
-    // }
+    for (int i = 0; i < n; i++) {
+        auto t1 = high_resolution_clock::now();
+        gate::to_matrix_gate(gate::RZ(i, 1.0))->update_quantum_state(&state);
+        auto t2 = high_resolution_clock::now();
+        auto us_int = duration_cast<microseconds>(t2 - t1);
+        std::cout << FormatWithCommas(us_int.count()) << "\n";
+    }
 }
 
 int main(int argc, char** argv) {

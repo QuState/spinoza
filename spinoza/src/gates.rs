@@ -469,20 +469,39 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
     let chunk_size = 1 << target;
 
-    state
-        .reals
-        .chunks_exact_mut(chunk_size)
-        .zip(state.imags.chunks_exact_mut(chunk_size))
-        .enumerate()
-        .for_each(|(i, (c0, c1))| {
-            c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
-                let m = diag_matrix[i & 1];
-                let c = *a;
-                let d = *b;
-                *a = c.mul_add(m.re, -d * m.im);
-                *b = c.mul_add(m.im, d * m.re);
+    if Config::global().threads < 2 {
+        state
+            .reals
+            .chunks_exact_mut(chunk_size)
+            .zip(state.imags.chunks_exact_mut(chunk_size))
+            .enumerate()
+            .for_each(|(i, (c0, c1))| {
+                c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
+                    let m = diag_matrix[i & 1];
+                    let c = *a;
+                    let d = *b;
+                    *a = c.mul_add(m.re, -d * m.im);
+                    *b = c.mul_add(m.im, d * m.re);
+                });
             });
-        });
+    } else {
+        state
+            .reals
+            .par_chunks_exact_mut(chunk_size)
+            .zip(state.imags.par_chunks_exact_mut(chunk_size))
+            .enumerate()
+            .with_min_len(1 << 11)
+            .for_each(|(i, (c0, c1))| {
+                c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
+                    let m = diag_matrix[i & 1];
+                    let c = *a;
+                    let d = *b;
+
+                    *a = c * m.re - d * m.im;
+                    *b = c * m.im + d * m.re;
+                });
+            });
+    }
 }
 
 // NOTE: since we are checking pairs, rather than generating, we need to go through the *entire*

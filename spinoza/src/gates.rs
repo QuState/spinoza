@@ -393,7 +393,7 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
 
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
     let chunk_size = 1 << target; // 2^{t}
-    let num_chunks = state.len() / chunk_size; // 2^{n} / 2^{t}
+                                  // num_chunks = state.len() / chunk_size; // 2^{n} / 2^{t}
 
     state
         .reals
@@ -401,7 +401,6 @@ fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude
         .zip(state.imags.chunks_exact_mut(chunk_size))
         .enumerate()
         .for_each(|(i, (c0, c1))| {
-            println!("{}..{}", c0.len() * i, c1.len() * i + chunk_size);
             c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
                 let m = diag_matrix[i & 1];
                 let c = *a;

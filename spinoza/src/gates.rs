@@ -391,29 +391,26 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     p_c_apply_to_range(state, 0..end, control, target, cos, sin);
 }
 
-fn rz_apply_target(state: &mut State, i: usize, m: &Amplitude) {
-    unsafe {
-        // a + ib
-        let a = *state.reals.get_unchecked(i);
-        let b = *state.imags.get_unchecked(i);
-
-        *state.reals.get_unchecked_mut(i) = a.mul_add(m.re, -b * m.im);
-        *state.imags.get_unchecked_mut(i) = a.mul_add(m.im, b * m.re);
-    }
-}
-
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
-    let mut chunk_start = 0;
+    let chunk_size = 1 << target; // 2^{t}
+    let num_chunks = state.len() / chunk_size; // 2^{n} / 2^{t}
 
-    while chunk_start < state.len() {
-        let chunk_end = state.len().min(((chunk_start >> target) + 1) << target);
+    state
+        .reals
+        .chunks_exact_mut(chunk_size)
+        .zip(state.imags.chunks_exact_mut(chunk_size))
+        .enumerate()
+        .for_each(|(i, (c0, c1))| {
+            println!("{}..{}", c0.len() * i, c1.len() * i + chunk_size);
+            c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
+                let m = diag_matrix[i & 1];
+                let c = *a;
+                let d = *b;
 
-        let m = unsafe { diag_matrix.get_unchecked((chunk_start >> target) & 1) };
-        for i in chunk_start..chunk_end {
-            rz_apply_target(state, i, m);
-        }
-        chunk_start = chunk_end;
-    }
+                *a = c * m.re - d * m.im;
+                *b = c * m.im + d * m.re;
+            });
+        });
 }
 
 // NOTE: since we are checking pairs, rather than generating, we need to go through the *entire*

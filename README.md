@@ -1,5 +1,7 @@
 # Spinoza
 
+[![Build](https://github.com/QuState/spinoza/actions/workflows/rust.yml/badge.svg)](https://github.com/QuState/spinoza/actions/workflows/rust.yml)
+
 ## Getting Started
 
 ### Prerequisites
@@ -70,7 +72,6 @@ cd spinoza/comparison
 ```
 
 ## References
-
 ```
 @misc{yusufov2023designing,
       title={Designing a Fast and Flexible Quantum State Simulator},

@@ -48,7 +48,7 @@ jobs:
           args: --all -- --check
 
   combo:
-    name: Clippy + rustfmt
+    name: Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -60,18 +60,10 @@ jobs:
           profile: minimal
           toolchain: nightly
           override: true
-          components: rustfmt, clippy
 
-      - name: Run cargo fmt
+      - name: Run cargo test
         uses: actions-rs/cargo@v1
         continue-on-error: true  # WARNING: only for this example, remove it!
         with:
-          command: fmt
-          args: --all -- --check
-
-      - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        continue-on-error: true  # WARNING: only for this example, remove it!
-        with:
-          command: clippy
-          args: -- -D warnings
+          command: test
+          args: cargo test

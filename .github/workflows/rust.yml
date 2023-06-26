@@ -66,4 +66,3 @@ jobs:
         continue-on-error: true  # WARNING: only for this example, remove it!
         with:
           command: test
-          args: cargo test

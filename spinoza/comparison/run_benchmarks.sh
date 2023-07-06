@@ -48,4 +48,6 @@ bm_rust_gates () {
 bm_rust_gates
 bm_qulacs_gates
 
-python plot.py --start_qubits $START_QUBITS --end_qubits $END_QUBITS --path_to_results $OUTPUT_DIR
+for g in ${gates[@]}; do
+    python plot.py --start_qubits $START_QUBITS --end_qubits $END_QUBITS --path_to_results $OUTPUT_DIR --gate ${g}
+done

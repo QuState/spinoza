@@ -44,62 +44,60 @@ def ratio_plot() -> None:
     plt.savefig("ratio-plot.png", dpi=600)
 
 
-def plot_all_gates(path: str, qubit_range: tuple[int, int], latex=False) -> None:
+def plot_gate(path: str, qubit_range: tuple[int, int], gate: str, latex=False) -> None:
     qubits = range(*qubit_range)
-    gates = ("rz", "rx", "ry", "h", "z", "p", "x", "value_encoding", "qcbm")
     i = 0
 
-    for gate in gates:
-        y1, y2 = [], []
+    y1, y2 = [], []
 
-        for n in qubits:
-            y1.append(np.mean(read_file(path + f"/qulacs/{gate}-{n}qubits")))
-            y2.append(np.mean(read_file(path + f"/spinoza/{gate}-{n}qubits")))
+    for n in qubits:
+        y1.append(np.mean(read_file(path + f"/qulacs/{gate}-{n}qubits")))
+        y2.append(np.mean(read_file(path + f"/spinoza/{gate}-{n}qubits")))
 
-        if latex:
-            fig = fmt.figure()
-            fig_filename = f"{gate}-gate.pgf"
-        else:
-            plt.figure(i)
-            i += 1
-            fig_filename = f"{gate}-gate.png"
+    if latex:
+        fig = fmt.figure()
+        fig_filename = f"{gate}-gate.pgf"
+    else:
+        plt.figure(i)
+        i += 1
+        fig_filename = f"{gate}-gate.png"
 
-        plt.plot(qubits, y1, label="qulacs", lw=0.7)
-        plt.plot(qubits, y2, label="spinoza", lw=0.7)
+    plt.plot(qubits, y1, label="qulacs", lw=0.7)
+    plt.plot(qubits, y2, label="spinoza", lw=0.7)
 
-        plt.xlabel("qubits")
-        plt.ylabel("time (us)")
-        plt.legend(fontsize="xx-small")
-        plt.tight_layout(pad=0.0)
+    plt.xlabel("qubits")
+    plt.ylabel("time (us)")
+    plt.legend(fontsize="xx-small")
+    plt.tight_layout(pad=0.0)
 
-        if latex:
-            plt.savefig(fig_filename)
-        else:
-            plt.savefig(fig_filename, dpi=600)
+    if latex:
+        plt.savefig(fig_filename)
+    else:
+        plt.savefig(fig_filename, dpi=600)
 
-        # next plot -- log-linear
-        if latex:
-            fig = fmt.figure()
-            fig_filename = f"{gate}-gate-log-linear.pgf"
-        else:
-            plt.figure(i)
-            i += 1
-            fig_filename = f"{gate}-gate-log-linear.png"
+    # next plot -- log-linear
+    if latex:
+        fig = fmt.figure()
+        fig_filename = f"{gate}-gate-log-linear.pgf"
+    else:
+        plt.figure(i)
+        i += 1
+        fig_filename = f"{gate}-gate-log-linear.png"
 
-        plt.plot(qubits, y1, label="qulacs", lw=0.7)
-        y2_adjust = [0.49 if x == 0 else x for x in y2]
-        plt.plot(qubits, y2_adjust, label="spinoza", lw=0.7)
+    plt.plot(qubits, y1, label="qulacs", lw=0.7)
+    y2_adjust = [0.49 if x == 0 else x for x in y2]
+    plt.plot(qubits, y2_adjust, label="spinoza", lw=0.7)
 
-        plt.yscale("log")
-        plt.xlabel("qubits")
-        plt.ylabel("time (us)")
-        plt.legend(fontsize="xx-small")
-        plt.tight_layout(pad=0.0)
+    plt.yscale("log")
+    plt.xlabel("qubits")
+    plt.ylabel("time (us)")
+    plt.legend(fontsize="xx-small")
+    plt.tight_layout(pad=0.0)
 
-        if latex:
-            plt.savefig(fig_filename)
-        else:
-            plt.savefig(fig_filename, dpi=600)
+    if latex:
+        plt.savefig(fig_filename)
+    else:
+        plt.savefig(fig_filename, dpi=600)
 
 
 if __name__ == "__main__":
@@ -108,10 +106,11 @@ if __name__ == "__main__":
     parser.add_argument("--path_to_results", type=str, required=True)
     parser.add_argument("--start_qubits", type=int, required=True)
     parser.add_argument("--end_qubits", type=int, required=True)
+    parser.add_argument("--gate", type=str, required=True)
     parser.add_argument("--latex", action="store_true")
     args = parser.parse_args()
 
     if args.latex:
         fmt = rsmf.setup("../../paper/rust-sim-paper.tex")
 
-    plot_all_gates(args.path_to_results, (args.start_qubits, args.end_qubits + 1), latex=args.latex)
+    plot_gate(args.path_to_results, (args.start_qubits, args.end_qubits + 1), args.gate, latex=args.latex)

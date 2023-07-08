@@ -1,11 +1,11 @@
 #![warn(clippy::complexity)]
 #![warn(missing_docs)]
-#![warn(clippy::style)]
 #![warn(clippy::correctness)]
 #![warn(clippy::suspicious)]
 #![warn(clippy::perf)]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![feature(slice_swap_unchecked)]
+#![feature(portable_simd)]
 
 pub mod circuit;
 pub mod config;

@@ -9,6 +9,7 @@ use comfy_table::{
 };
 use std::ops::Range;
 
+/// Formats an integer with commas, as a string. Used for readability
 pub fn pretty_print_int(i: u128) -> String {
     let mut s = String::new();
     let i_str = i.to_string();
@@ -26,6 +27,7 @@ pub fn padded_bin(i: usize, width: usize) -> String {
     String::from(&format!("{:#01$b}", i, width + 2)[2..])
 }
 
+/// Print out the state vector as a table to visualize results
 pub fn to_table(state: &State) {
     let n: usize = state.n.into();
     let mut table = Table::new();
@@ -156,6 +158,7 @@ pub fn balanced_ranges(
     })
 }
 
+/// Utility function for testing
 pub fn assert_float_closeness(actual: Float, expected: Float, epsilon: Float) {
-    assert!((actual - expected).abs() < epsilon)
+    assert!((actual - expected).abs() < epsilon);
 }

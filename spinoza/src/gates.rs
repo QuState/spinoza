@@ -3,6 +3,7 @@ use crate::{
     math::{Amplitude, Float, SQRT_ONE_HALF},
 };
 use std::ops::Range;
+use std::simd::*;
 const UNROLL_FACTOR: usize = 4;
 
 #[derive(Clone, Copy)]
@@ -18,6 +19,7 @@ pub enum Gate {
     U((Float, Float, Float)),
 }
 
+/// Applies a single qubit gate to a single target
 pub fn apply(gate: Gate, state: &mut State, target: usize) {
     match gate {
         Gate::H => h_apply(state, target),
@@ -32,6 +34,7 @@ pub fn apply(gate: Gate, state: &mut State, target: usize) {
     }
 }
 
+/// Applies a single qubit gate to a single target, with one control
 pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
     match gate {
         Gate::X => x_c_apply(state, control, target),
@@ -43,6 +46,7 @@ pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
     }
 }
 
+/// Applies a single qubit gate to a single target, with two controls
 pub fn cc_apply(gate: Gate, state: &mut State, control0: usize, control1: usize, target: usize) {
     match gate {
         Gate::X => x_cc_apply(state, control0, control1, target),
@@ -120,7 +124,7 @@ fn x_c_apply(state: &mut State, control: usize, target: usize) {
     x_c_apply_to_range(state, 0..end, control, target);
 }
 
-pub fn x_cc_apply(state: &mut State, control0: usize, control1: usize, target: usize) {
+fn x_cc_apply(state: &mut State, control0: usize, control1: usize, target: usize) {
     let mut i = 0;
     let dist = 1 << target;
 
@@ -284,7 +288,7 @@ fn rx_apply_target(state: &mut State, l0: usize, l1: usize, cos: Float, neg_sin:
     }
 }
 
-pub fn rx_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float, neg_sin: Float) {
+fn rx_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float, neg_sin: Float) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {
@@ -294,7 +298,7 @@ pub fn rx_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float,
     }
 }
 
-pub fn rx_apply(state: &mut State, target: usize, angle: Float) {
+fn rx_apply(state: &mut State, target: usize, angle: Float) {
     let theta = angle * 0.5;
     let ct = Float::cos(theta);
     let nst = -Float::sin(theta);
@@ -393,22 +397,54 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
 
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
     let chunk_size = 1 << target; // 2^{t}
-                                  // num_chunks = state.len() / chunk_size; // 2^{n} / 2^{t}
-
+                                  //
     state
         .reals
         .chunks_exact_mut(chunk_size)
         .zip(state.imags.chunks_exact_mut(chunk_size))
         .enumerate()
         .for_each(|(i, (c0, c1))| {
-            c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
-                let m = diag_matrix[i & 1];
-                let c = *a;
-                let d = *b;
+            if chunk_size >= 8 {
+                let m_re = f64x4::splat(diag_matrix[i & 1].re);
+                let m_im = f64x4::splat(diag_matrix[i & 1].im);
 
-                *a = c * m.re - d * m.im;
-                *b = c * m.im + d * m.re;
-            });
+                for k in (0..chunk_size).step_by(8) {
+                    let a = f64x4::from_slice(&c0[k..k + 4]);
+                    let b = f64x4::from_slice(&c1[k..k + 4]);
+                    let c = f64x4::from_slice(&c0[k + 4..k + 8]);
+                    let d = f64x4::from_slice(&c1[k + 4..k + 8]);
+
+                    let v0 = a * m_re - b * m_im;
+                    let v1 = a * m_im + b * m_re;
+                    let v2 = c * m_re - d * m_im;
+                    let v3 = c * m_im + d * m_re;
+                    c0[k..k + 4].copy_from_slice(v0.as_array());
+                    c1[k..k + 4].copy_from_slice(v1.as_array());
+                    c0[k + 4..k + 8].copy_from_slice(v2.as_array());
+                    c1[k + 4..k + 8].copy_from_slice(v3.as_array());
+                }
+            } else if chunk_size >= 4 {
+                let m_re = f64x4::splat(diag_matrix[i & 1].re);
+                let m_im = f64x4::splat(diag_matrix[i & 1].im);
+
+                for k in (0..chunk_size).step_by(4) {
+                    let a = f64x4::from_slice(&c0[k..k + 4]);
+                    let b = f64x4::from_slice(&c1[k..k + 4]);
+
+                    let v0 = a * m_re - b * m_im;
+                    let v1 = a * m_im + b * m_re;
+                    c0[k..k + 4].copy_from_slice(v0.as_array());
+                    c1[k..k + 4].copy_from_slice(v1.as_array());
+                }
+            } else {
+                c0.iter_mut().zip(c1.iter_mut()).for_each(|(a, b)| {
+                    let m = diag_matrix[i & 1];
+                    let c = *a;
+                    let d = *b;
+                    *a = c * m.re - d * m.im;
+                    *b = c * m.im + d * m.re;
+                });
+            }
         });
 }
 
@@ -557,7 +593,7 @@ fn u_apply_target(state: &mut State, g: &[Amplitude], l0: usize, l1: usize) {
     state.imags[l1] = q.mul_add(d, r.mul_add(c, s.mul_add(n, t * m)));
 }
 
-pub fn u_apply_strategy2(state: &mut State, g: &[Amplitude], chunk: usize, target: usize) {
+fn u_apply_strategy2(state: &mut State, g: &[Amplitude], chunk: usize, target: usize) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {

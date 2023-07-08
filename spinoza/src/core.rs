@@ -9,14 +9,20 @@ use std::collections::HashMap;
 
 pub static CONFIG: OnceCell<Config> = OnceCell::new();
 
+/// A state vector composed of 2^{n} amplitudes
 #[derive(Clone)]
 pub struct State {
+    /// Real components of the amplitudes
     pub reals: Vec<Float>,
+    /// Imaginary components of the amplitudes
     pub imags: Vec<Float>,
+    /// The number of qubits the state is representing
     pub n: u8,
 }
 
 impl State {
+    /// Create a new state vector of size 2^{n}, where `n` is the number of qubits.
+    /// NOTE: n must be greater than 0
     pub fn new(n: usize) -> Self {
         assert!(n > 0);
         let mut reals = vec![0.0; 1 << n];
@@ -29,7 +35,10 @@ impl State {
         }
     }
 
+    #[allow(clippy::len_without_is_empty)]
     #[inline]
+    /// Give the length of the state vector. Note that imaginary and real component
+    /// vectors should always be of the same size.
     pub fn len(&self) -> usize {
         self.imags.len()
     }

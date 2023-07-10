@@ -19,29 +19,40 @@ def read_file(filepath: str) -> list[int]:
     return y
 
 
-def ratio_plot() -> None:
-    fig, axs = plt.subplots(8, figsize=(7, 20))
-    fig.subplots_adjust(
-        left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.5
-    )
-    fig.suptitle("Rust vs. Qulacs C++")
+def plot_gate_spin_only(p0: str, p1: str, qubit_range: tuple[int, int], gate: str) -> None:
+    qubits = range(*qubit_range)
+    y1, y2 = [], []
 
-    for i in range(1, 9):
-        x1, y1 = read_file(f"/tmp/cpp-qulacs-benchmark-{i}threads")
-        x2, y2 = read_file(f"/tmp/rust-quantum-benchmark-{i}threads")
-        x1, y1 = x1[16:], y1[16:]
-        x2, y2 = x2[16:], y2[16:]
-        y = [y_i / y_j for (y_i, y_j) in zip(y2, y1)]
-        axs[i - 1].plot(x1, y, label=f"{i}-threads")
-        axs[i - 1].set_xlabel("qubits", fontsize=10)
-        axs[i - 1].set_ylabel("ratio", fontsize=10)
-        axs[i - 1].set_title(f"{i} threads", fontsize=10)
+    for n in qubits:
+        y1.append(np.mean(read_file(p0 + f"/spinoza/{gate}-{n}qubits")))
+        y2.append(np.mean(read_file(p1 + f"/spinoza/{gate}-{n}qubits")))
 
-    # plt.xlabel("qubits")
-    # plt.ylabel("ratio")
-    # plt.legend(fontsize="xx-small")
-    # plt.title("Rust vs. Qulacs C++ w/ 8 threads")
-    plt.savefig("ratio-plot.png", dpi=600)
+    plt.figure()
+    fig_filename = f"{gate}-gate.png"
+
+    plt.plot(qubits, y1, label="auto-vectorization", lw=0.7)
+    plt.plot(qubits, y2, label="portable-simd", lw=0.7)
+
+    plt.xlabel("qubits")
+    plt.ylabel("time (us)")
+    plt.legend(fontsize="xx-small")
+    plt.tight_layout(pad=0.0)
+    plt.savefig(fig_filename, dpi=600)
+
+    # next plot -- log-linear
+    plt.figure()
+    fig_filename = f"{gate}-gate-log-linear.png"
+
+    plt.plot(qubits, y1, label="auto-vectorization", lw=0.7)
+    y2_adjust = [0.49 if x == 0 else x for x in y2]
+    plt.plot(qubits, y2_adjust, label="portable-simd", lw=0.7)
+
+    plt.yscale("log")
+    plt.xlabel("qubits")
+    plt.ylabel("time (us)")
+    plt.legend(fontsize="xx-small")
+    plt.tight_layout(pad=0.0)
+    plt.savefig(fig_filename, dpi=600)
 
 
 def plot_gate(path: str, qubit_range: tuple[int, int], gate: str, latex=False) -> None:

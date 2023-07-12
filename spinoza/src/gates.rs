@@ -253,23 +253,6 @@ fn h_apply(state: &mut State, target: usize) {
     }
 }
 
-fn rx_apply_target_0(state: &mut State, l: usize, cos: Float, neg_sin: Float) {
-    unsafe {
-        let a = *state.reals.get_unchecked(l);
-        let b = *state.imags.get_unchecked(l);
-
-        // c + id
-        let c = *state.reals.get_unchecked(l + 1);
-        let d = *state.imags.get_unchecked(l + 1);
-
-        *state.reals.get_unchecked_mut(l) = a.mul_add(cos, d * -neg_sin);
-        *state.imags.get_unchecked_mut(l) = b.mul_add(cos, c * neg_sin);
-
-        *state.reals.get_unchecked_mut(l + 1) = b.mul_add(-neg_sin, c * cos);
-        *state.imags.get_unchecked_mut(l + 1) = d.mul_add(cos, a * neg_sin);
-    }
-}
-
 fn rx_apply_target(state: &mut State, l0: usize, l1: usize, cos: Float, neg_sin: Float) {
     unsafe {
         // a + ib
@@ -280,21 +263,46 @@ fn rx_apply_target(state: &mut State, l0: usize, l1: usize, cos: Float, neg_sin:
         let c = *state.reals.get_unchecked(l1);
         let d = *state.imags.get_unchecked(l1);
 
-        *state.reals.get_unchecked_mut(l0) = a.mul_add(cos, d * -neg_sin);
-        *state.imags.get_unchecked_mut(l0) = b.mul_add(cos, c * neg_sin);
+        *state.reals.get_unchecked_mut(l0) = a * cos + d * -neg_sin;
+        *state.imags.get_unchecked_mut(l0) = b * cos + c * neg_sin;
 
-        *state.reals.get_unchecked_mut(l1) = b.mul_add(-neg_sin, c * cos);
-        *state.imags.get_unchecked_mut(l1) = d.mul_add(cos, a * neg_sin);
+        *state.reals.get_unchecked_mut(l1) = b * -neg_sin + c * cos;
+        *state.imags.get_unchecked_mut(l1) = d * cos + a * neg_sin;
     }
 }
 
 fn rx_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float, neg_sin: Float) {
     let dist = 1 << target;
-    let base = (2 * chunk) << target;
-    for i in 0..dist {
-        let l0 = base + i;
-        let l1 = l0 + dist;
-        rx_apply_target(state, l0, l1, cos, neg_sin);
+    let prefix = (2 * chunk) << target;
+
+    if dist >= 4 {
+        let cos_v = f64x4::splat(cos);
+        let neg_sin_v = f64x4::splat(neg_sin);
+
+        for i in (0..dist).step_by(4) {
+            let l0 = prefix + i;
+            let l1 = l0 + dist;
+            let a = f64x4::from_slice(&state.reals[l0..l0 + 4]);
+            let b = f64x4::from_slice(&state.imags[l0..l0 + 4]);
+            let c = f64x4::from_slice(&state.reals[l1..l1 + 4]);
+            let d = f64x4::from_slice(&state.imags[l1..l1 + 4]);
+
+            let v0 = a * cos_v - d * neg_sin_v;
+            let v1 = b * cos_v + c * neg_sin_v;
+            let v2 = b * -neg_sin_v + c * cos_v;
+            let v3 = d * cos_v + a * neg_sin_v;
+
+            state.reals[l0..l0 + 4].copy_from_slice(v0.as_array());
+            state.imags[l0..l0 + 4].copy_from_slice(v1.as_array());
+            state.reals[l1..l1 + 4].copy_from_slice(v2.as_array());
+            state.imags[l1..l1 + 4].copy_from_slice(v3.as_array());
+        }
+    } else {
+        for i in 0..dist {
+            let l0 = prefix + i;
+            let l1 = l0 + dist;
+            rx_apply_target(state, l0, l1, cos, neg_sin);
+        }
     }
 }
 
@@ -303,19 +311,11 @@ fn rx_apply(state: &mut State, target: usize, angle: Float) {
     let ct = Float::cos(theta);
     let nst = -Float::sin(theta);
 
-    if target == 0 {
-        let mut l = 0;
-        while l < state.len() - 1 {
-            rx_apply_target_0(state, l, ct, nst);
-            l += 2;
-        }
-    } else {
-        let end = state.len() >> 1;
-        let chunks = end >> target;
-        (0..chunks).for_each(|chunk| {
-            rx_proc_chunk(state, chunk, target, ct, nst);
-        });
-    }
+    let end = state.len() >> 1;
+    let chunks = end >> target;
+    (0..chunks).for_each(|chunk| {
+        rx_proc_chunk(state, chunk, target, ct, nst);
+    });
 }
 
 fn rx_c_apply_to_range(

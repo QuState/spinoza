@@ -11,20 +11,31 @@ use std::ops::Range;
 
 /// Formats an integer with commas, as a string. Used for readability
 pub fn pretty_print_int(i: u128) -> String {
-    let mut s = String::new();
-    let i_str = i.to_string();
-    let a = i_str.chars().rev().enumerate();
-    for (idx, val) in a {
-        if idx != 0 && idx % 3 == 0 {
-            s.insert(0, ',');
-        }
-        s.insert(0, val);
+    if i == 0 {
+        return "0".into();
     }
-    s
+
+    let mut q = Vec::with_capacity(51);
+    let mut x = i;
+    let mut comma = 0;
+
+    while x > 0 {
+        let r = x % 10;
+        x /= 10;
+
+        if comma == 3 {
+            q.push(',');
+            comma = 0;
+        }
+        q.push(std::char::from_digit(r.try_into().unwrap(), 10).unwrap());
+        comma += 1;
+    }
+
+    q.into_iter().rev().collect()
 }
 
 pub fn padded_bin(i: usize, width: usize) -> String {
-    String::from(&format!("{:#01$b}", i, width + 2)[2..])
+    format!("{:#01$b}", i, width + 2)[2..].into()
 }
 
 /// Print out the state vector as a table to visualize results

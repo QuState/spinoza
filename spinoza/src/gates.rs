@@ -275,7 +275,44 @@ fn rx_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float, neg
     let dist = 1 << target;
     let prefix = (2 * chunk) << target;
 
-    if dist >= 4 {
+    if dist >= 8 {
+        let cos_v = f64x4::splat(cos);
+        let neg_sin_v = f64x4::splat(neg_sin);
+
+        for i in (0..dist).step_by(8) {
+            let l0 = prefix + i;
+            let l1 = l0 + dist;
+            let a0 = f64x4::from_slice(&state.reals[l0..l0 + 4]);
+            let b0 = f64x4::from_slice(&state.imags[l0..l0 + 4]);
+            let a1 = f64x4::from_slice(&state.reals[l0 + 4..l0 + 8]);
+            let b1 = f64x4::from_slice(&state.imags[l0 + 4..l0 + 8]);
+
+            let c0 = f64x4::from_slice(&state.reals[l1..l1 + 4]);
+            let d0 = f64x4::from_slice(&state.imags[l1..l1 + 4]);
+            let c1 = f64x4::from_slice(&state.reals[l1 + 4..l1 + 8]);
+            let d1 = f64x4::from_slice(&state.imags[l1 + 4..l1 + 8]);
+
+            let v0 = a0 * cos_v - d0 * neg_sin_v;
+            let v1 = b0 * cos_v + c0 * neg_sin_v;
+            let v2 = b0 * -neg_sin_v + c0 * cos_v;
+            let v3 = d0 * cos_v + a0 * neg_sin_v;
+
+            let v4 = a1 * cos_v - d1 * neg_sin_v;
+            let v5 = b1 * cos_v + c1 * neg_sin_v;
+            let v6 = b1 * -neg_sin_v + c1 * cos_v;
+            let v7 = d1 * cos_v + a1 * neg_sin_v;
+
+            state.reals[l0..l0 + 4].copy_from_slice(v0.as_array());
+            state.imags[l0..l0 + 4].copy_from_slice(v1.as_array());
+            state.reals[l1..l1 + 4].copy_from_slice(v2.as_array());
+            state.imags[l1..l1 + 4].copy_from_slice(v3.as_array());
+
+            state.reals[l0 + 4..l0 + 8].copy_from_slice(v4.as_array());
+            state.imags[l0 + 4..l0 + 8].copy_from_slice(v5.as_array());
+            state.reals[l1 + 4..l1 + 8].copy_from_slice(v6.as_array());
+            state.imags[l1 + 4..l1 + 8].copy_from_slice(v7.as_array());
+        }
+    } else if dist >= 4 {
         let cos_v = f64x4::splat(cos);
         let neg_sin_v = f64x4::splat(neg_sin);
 

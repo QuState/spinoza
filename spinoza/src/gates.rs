@@ -392,8 +392,7 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
 }
 
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
-    let chunk_size = 1 << target; // 2^{t}
-                                  // num_chunks = state.len() / chunk_size; // 2^{n} / 2^{t}
+    let chunk_size = 1 << target;
 
     state
         .reals
@@ -405,9 +404,8 @@ fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude
                 let m = diag_matrix[i & 1];
                 let c = *a;
                 let d = *b;
-
-                *a = c * m.re - d * m.im;
-                *b = c * m.im + d * m.re;
+                *a = c.mul_add(m.re, -d * m.im);
+                *b = c.mul_add(m.im, d * m.re);
             });
         });
 }

@@ -12,7 +12,7 @@ pub struct Config {
 
 impl Config {
     pub fn global() -> &'static Config {
-        CONFIG.get().expect("config is not initialized")
+        CONFIG.get_or_init(Config::test)
     }
 
     pub const fn from_cli(args: QSArgs) -> Config {

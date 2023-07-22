@@ -416,20 +416,38 @@ fn rx_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     }
 }
 
-fn p_apply_target(state: &mut State, l1: usize, cos: Float, sin: Float) {
-    let z_re = state.reals[l1];
-    let z_im = state.imags[l1];
-    state.reals[l1] = z_re.mul_add(cos, -z_im * sin);
-    state.imags[l1] = z_im.mul_add(cos, z_re * sin);
-}
-
 fn p_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float, sin: Float) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
 
-    // l1 = base + i + dist, for i \in \{0, 1, 2, \ldots, dist-1\}
-    for l1 in (base + dist)..(base + 2 * dist) {
-        p_apply_target(state, l1, cos, sin);
+    // s1 = base + i + dist, for i \in \{0, 1, 2, \ldots, dist-1\}
+    for s1 in (base + dist)..(base + 2 * dist) {
+        let z_re = state.reals[s1];
+        let z_im = state.imags[s1];
+        state.reals[s1] = z_re.mul_add(cos, -z_im * sin);
+        state.imags[s1] = z_im.mul_add(cos, z_re * sin);
+    }
+}
+
+fn p_proc_chunk_par(
+    state_re: SendPtr<Float>,
+    state_im: SendPtr<Float>,
+    chunk: usize,
+    target: usize,
+    cos: Float,
+    sin: Float,
+) {
+    let dist = 1 << target;
+    let base = (2 * chunk) << target;
+
+    // s1 = base + i + dist, for i \in \{0, 1, 2, \ldots, dist-1\}
+    for s1 in (base + dist)..(base + 2 * dist) {
+        unsafe {
+            let z_re = *state_re.get().add(s1);
+            let z_im = *state_im.get().add(s1);
+            *state_re.get().add(s1) = z_re.mul_add(cos, -z_im * sin);
+            *state_im.get().add(s1) = z_im.mul_add(cos, z_re * sin);
+        }
     }
 }
 
@@ -438,32 +456,32 @@ fn p_apply(state: &mut State, target: usize, angle: Float) {
     let end = state.len() >> 1;
     let chunks = end >> target;
 
-    (0..chunks).for_each(|chunk| {
-        p_proc_chunk(state, chunk, target, cos, sin);
-    });
-}
-
-fn p_c_apply_to_range(
-    state: &mut State,
-    range: Range<usize>,
-    control: usize,
-    target: usize,
-    cos: Float,
-    sin: Float,
-) {
-    let marks = (target.min(control), target.max(control));
-
-    for i in range {
-        let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-        let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-        p_apply_target(state, l1, cos, sin);
+    if Config::global().threads < 2 {
+        (0..chunks).for_each(|chunk| {
+            p_proc_chunk(state, chunk, target, cos, sin);
+        });
+    } else {
+        let state_re = SendPtr(state.reals.as_mut_ptr());
+        let state_im = SendPtr(state.imags.as_mut_ptr());
+        (0..chunks).for_each(|chunk| {
+            p_proc_chunk_par(state_re, state_im, chunk, target, cos, sin);
+        });
     }
 }
 
 fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     let (sin, cos) = Float::sin_cos(angle);
     let end = state.len() >> 2;
-    p_c_apply_to_range(state, 0..end, control, target, cos, sin);
+    let marks = (target.min(control), target.max(control));
+
+    for i in 0..end {
+        let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+        let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+        let z_re = state.reals[s1];
+        let z_im = state.imags[s1];
+        state.reals[s1] = z_re.mul_add(cos, -z_im * sin);
+        state.imags[s1] = z_im.mul_add(cos, z_re * sin);
+    }
 }
 
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {

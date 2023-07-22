@@ -526,10 +526,35 @@ fn z_proc_chunk(state: &mut State, chunk: usize, target: usize) {
     }
 }
 
+fn z_proc_chunk_par(
+    state_re: SendPtr<Float>,
+    state_im: SendPtr<Float>,
+    chunk: usize,
+    target: usize,
+) {
+    let dist = 1 << target;
+    let base = (2 * chunk) << target;
+    for i in base + dist..base + 2 * dist {
+        unsafe {
+            *state_re.get().add(i) = -(*state_re.get().add(i));
+            *state_im.get().add(i) = -(*state_im.get().add(i));
+        };
+    }
+}
+
 fn z_apply(state: &mut State, target: usize) {
     // NOTE: chunks == end >> target, where end == state.len() >> 1
     let chunks = state.len() >> (target + 1);
-    (0..chunks).for_each(|c| z_proc_chunk(state, c, target));
+
+    if Config::global().threads < 2 {
+        (0..chunks).for_each(|c| z_proc_chunk(state, c, target));
+    } else {
+        let state_re = SendPtr(state.reals.as_mut_ptr());
+        let state_im = SendPtr(state.imags.as_mut_ptr());
+        (0..chunks)
+            .into_par_iter()
+            .for_each(|chunk| z_proc_chunk_par(state_re, state_im, chunk, target));
+    }
 }
 
 #[inline]

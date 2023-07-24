@@ -498,13 +498,28 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     let end = state.len() >> 2;
     let marks = (target.min(control), target.max(control));
 
-    for i in 0..end {
-        let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-        let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-        let z_re = state.reals[s1];
-        let z_im = state.imags[s1];
-        state.reals[s1] = z_re.mul_add(cos, -z_im * sin);
-        state.imags[s1] = z_im.mul_add(cos, z_re * sin);
+    if Config::global().threads < 2 {
+        for i in 0..end {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let z_re = state.reals[s1];
+            let z_im = state.imags[s1];
+            state.reals[s1] = z_re.mul_add(cos, -z_im * sin);
+            state.imags[s1] = z_im.mul_add(cos, z_re * sin);
+        }
+    } else {
+        let state_re = SendPtr(state.reals.as_mut_ptr());
+        let state_im = SendPtr(state.imags.as_mut_ptr());
+        (0..end).into_par_iter().for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            unsafe {
+                let z_re = *state_re.get().add(s1);
+                let z_im = *state_im.get().add(s1);
+                *state_re.get().add(s1) = z_re.mul_add(cos, -z_im * sin);
+                *state_im.get().add(s1) = z_im.mul_add(cos, z_re * sin);
+            }
+        });
     }
 }
 
@@ -538,9 +553,8 @@ fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude
                     let m = diag_matrix[i & 1];
                     let c = *a;
                     let d = *b;
-
-                    *a = c * m.re - d * m.im;
-                    *b = c * m.im + d * m.re;
+                    *a = c.mul_add(m.re, -d * m.im);
+                    *b = c.mul_add(m.im, d * m.re);
                 });
             });
     }

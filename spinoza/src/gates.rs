@@ -229,61 +229,85 @@ fn y_c_apply(state: &mut State, control: usize, target: usize) {
     y_c_apply_to_range(state, 0..end, control, target);
 }
 
-fn h_apply_target_0(state: &mut State, l0: usize) {
-    let a = state.reals[l0];
-    let b = state.imags[l0];
-
-    let c = state.reals[l0 + 1];
-    let d = state.imags[l0 + 1];
-
-    let a1 = SQRT_ONE_HALF * a;
-    let b1 = SQRT_ONE_HALF * b;
-    let c1 = SQRT_ONE_HALF * c;
-    let d1 = SQRT_ONE_HALF * d;
-
-    state.reals[l0] = a1 + c1;
-    state.imags[l0] = b1 + d1;
-    state.reals[l0 + 1] = a1 - c1;
-    state.imags[l0 + 1] = b1 - d1;
-}
-
-fn h_apply_target(state: &mut State, l0: usize, l1: usize) {
-    let a = state.reals[l0];
-    let b = state.imags[l0];
-    let c = state.reals[l1];
-    let d = state.imags[l1];
-
-    let a1 = SQRT_ONE_HALF * a;
-    let b1 = SQRT_ONE_HALF * b;
-    let c1 = SQRT_ONE_HALF * c;
-    let d1 = SQRT_ONE_HALF * d;
-
-    state.reals[l0] = a1 + c1;
-    state.imags[l0] = b1 + d1;
-    state.reals[l1] = a1 - c1;
-    state.imags[l1] = b1 - d1;
-}
-
-fn h_proc_chunk(state: &mut State, chunk: usize, target: usize) {
+/// Apply H gate via Concatenation strategy (i.e., Strategy 2)
+fn h_apply_concat(state: &mut State, chunk: usize, target: usize) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {
-        let l0 = base + i;
-        let l1 = l0 + dist;
-        h_apply_target(state, l0, l1);
+        let s0 = base + i;
+        let s1 = s0 + dist;
+
+        let (a, b, c, d) = unsafe {
+            let a = *state.reals.get_unchecked(s0);
+            let b = *state.imags.get_unchecked(s0);
+            let c = *state.reals.get_unchecked(s1);
+            let d = *state.imags.get_unchecked(s1);
+            (a, b, c, d)
+        };
+
+        let a1 = SQRT_ONE_HALF * a;
+        let b1 = SQRT_ONE_HALF * b;
+        let c1 = SQRT_ONE_HALF * c;
+        let d1 = SQRT_ONE_HALF * d;
+
+        unsafe {
+            *state.reals.get_unchecked_mut(s0) = a1 + c1;
+            *state.imags.get_unchecked_mut(s0) = b1 + d1;
+            *state.reals.get_unchecked_mut(s1) = a1 - c1;
+            *state.imags.get_unchecked_mut(s1) = b1 - d1;
+        }
+    }
+}
+
+fn h_apply_concat_par(
+    state_re: SendPtr<Float>,
+    state_im: SendPtr<Float>,
+    chunk: usize,
+    target: usize,
+) {
+    let dist = 1 << target;
+    let base = (2 * chunk) << target;
+
+    for i in 0..dist {
+        let s0 = base + i;
+        let s1 = s0 + dist;
+
+        let (a, b, c, d) = unsafe {
+            let a = *state_re.get().add(s0);
+            let b = *state_im.get().add(s0);
+            let c = *state_re.get().add(s1);
+            let d = *state_im.get().add(s1);
+            (a, b, c, d)
+        };
+
+        let a1 = SQRT_ONE_HALF * a;
+        let b1 = SQRT_ONE_HALF * b;
+        let c1 = SQRT_ONE_HALF * c;
+        let d1 = SQRT_ONE_HALF * d;
+
+        unsafe {
+            *state_re.get().add(s0) = a1 + c1;
+            *state_im.get().add(s0) = b1 + c1;
+            *state_re.get().add(s1) = a1 - c1;
+            *state_im.get().add(s1) = b1 - d1;
+        }
     }
 }
 
 fn h_apply(state: &mut State, target: usize) {
-    if target == 0 {
-        (0..state.len())
-            .step_by(2)
-            .for_each(|l| h_apply_target_0(state, l));
-    } else {
-        let end = state.len() >> 1;
-        let chunks = end >> target;
+    let end = state.len() >> 1;
+    let chunks = end >> target;
+
+    if Config::global().threads < 2 {
         (0..chunks).for_each(|c| {
-            h_proc_chunk(state, c, target);
+            h_apply_concat(state, c, target);
+        });
+    } else {
+        let state_re = SendPtr(state.reals.as_mut_ptr());
+        let state_im = SendPtr(state.imags.as_mut_ptr());
+
+        (0..chunks).for_each(|c| {
+            h_apply_concat_par(state_re, state_im, c, target);
         });
     }
 }

@@ -7,8 +7,9 @@ use comfy_table::{
     Color::Rgb,
     {Cell, Color, Table},
 };
-use std::ops::Range;
 
+// TODO(Saveliy): optimize for fun
+/// Convert an unsigned 128 bit integer to a more legible String.
 pub fn pretty_print_int(i: u128) -> String {
     let mut s = String::new();
     let i_str = i.to_string();
@@ -22,10 +23,12 @@ pub fn pretty_print_int(i: u128) -> String {
     s
 }
 
+/// Convert a `usize` to its binary expansion, but padded with 0's. Padding is of size, width.
 pub fn padded_bin(i: usize, width: usize) -> String {
-    String::from(&format!("{:#01$b}", i, width + 2)[2..])
+    format!("{:01$b}", i, width + 2)
 }
 
+/// Display a the `State` as a table
 pub fn to_table(state: &State) {
     let n: usize = state.n.into();
     let mut table = Table::new();
@@ -138,16 +141,18 @@ fn hsv_to_rgb(hue: f32, sat: f32, val: f32) -> [u8; 3] {
     ]
 }
 
+/// Create an iterator of `Range`'s, such that the total size is
+/// `total_count`, and the ranges are of approximately equal size. Deprecated.
 pub fn balanced_ranges(
     total_count: usize,
     bucket_count: usize,
-) -> impl Iterator<Item = Range<usize>> {
+) -> impl Iterator<Item = std::ops::Range<usize>> {
     let b = bucket_count.min(total_count);
     let (q, r) = (total_count / b, total_count % b);
     let mut start: usize = 0;
 
     (0..b).map(move |i| {
-        let range = Range {
+        let range = std::ops::Range {
             start,
             end: start + q + if i < r { 1 } else { 0 },
         };
@@ -156,6 +161,7 @@ pub fn balanced_ranges(
     })
 }
 
+/// Asserts that two floating point numbers are approximately equal.
 pub fn assert_float_closeness(actual: Float, expected: Float, epsilon: Float) {
-    assert!((actual - expected).abs() < epsilon)
+    assert!((actual - expected).abs() < epsilon);
 }

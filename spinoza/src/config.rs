@@ -1,6 +1,7 @@
 use crate::core::CONFIG;
 use clap::Parser;
 
+/// Config for simulations that are run using the CLI
 #[derive(Debug, Clone, Copy)]
 pub struct Config {
     pub threads: u32, // If a larger data type is needed, that's just wild

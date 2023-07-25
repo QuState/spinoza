@@ -1,3 +1,4 @@
+//! Abstractions for a quantum circuit
 use crate::{
     core::State,
     gates::{apply, c_apply, cc_apply, Gate},

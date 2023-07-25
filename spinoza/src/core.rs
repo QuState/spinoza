@@ -1,3 +1,4 @@
+//! Abstractions for representing a Quantum State
 use crate::{
     config::Config,
     gates::{apply, c_apply, Gate},

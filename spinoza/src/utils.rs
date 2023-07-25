@@ -1,3 +1,4 @@
+//! An assortment of utility functions for visualizing, benchmarking, and testing.
 use crate::{
     core::State,
     math::{modulus, Float, PI},

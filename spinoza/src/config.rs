@@ -1,3 +1,4 @@
+//! Configuration options for runnning spinoza
 use crate::core::CONFIG;
 use clap::Parser;
 use num_cpus;

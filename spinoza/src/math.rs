@@ -1,3 +1,6 @@
+//! An assortment of mathematical structures, functions, and constants for quantum state
+//! simulation.
+
 /// An alias for https://doc.rust-lang.org/std/f64/consts/constant.FRAC_1_SQRT_2.html
 pub const SQRT_ONE_HALF: Float = std::f64::consts::FRAC_1_SQRT_2 as Float;
 

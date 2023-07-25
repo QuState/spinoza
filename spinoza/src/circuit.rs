@@ -5,6 +5,7 @@ use crate::{
 };
 use std::{collections::HashSet, ops::Index};
 
+/// See https://en.wikipedia.org/wiki/Quantum_register
 #[derive(Clone)]
 pub struct QuantumRegister(pub Vec<usize>);
 
@@ -18,47 +19,66 @@ impl Index<usize> for QuantumRegister {
 }
 
 impl QuantumRegister {
+    /// Create a new QuantumRegister
     pub fn new(size: usize) -> Self {
         QuantumRegister((0..size).collect())
     }
 
+    /// The length of the quantum register
+    #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
+    /// Update quantum register by shift
     #[inline]
     pub fn update_shift(&mut self, shift: usize) {
         self.0 = (shift..shift + self.len()).collect();
     }
 }
 
+/// Control qubits
 #[derive(Clone)]
 pub enum Controls {
+    /// No controls
     None,
+    /// Single Control
     Single(usize),
+    /// Multiple Controls
     Ones(Vec<usize>),
 
+    /// Mixed Controls
     #[allow(dead_code)]
     Mixed {
+        /// Control qubits
         controls: Vec<usize>,
+        /// Zeroes
         zeros: HashSet<usize>,
     },
 }
 
+/// QuantumTransformation to be applied to the State
 #[derive(Clone)]
 pub struct QuantumTransformation {
+    /// The quantum logic gate
     pub gate: Gate,
+    /// The target qubits
     pub target: usize,
+    /// The control qubits
     pub controls: Controls,
 }
 
+/// A model of a Quantum circuit
+/// See https://en.wikipedia.org/wiki/Quantum_circuit
 pub struct QuantumCircuit {
     transformations: Vec<QuantumTransformation>,
+    /// The Quantum State to which transformations are applied
     pub state: State,
 }
 
 impl QuantumCircuit {
+    /// Create a new QuantumCircuit from multiple QuantumRegisters
     pub fn new_multi(registers: &mut [&mut QuantumRegister]) -> Self {
         let mut bits = 0;
 
@@ -72,18 +92,22 @@ impl QuantumCircuit {
         }
     }
 
+    /// Create a new QuantumCircuit from a single QuantumRegister
     pub fn new(r: &mut QuantumRegister) -> Self {
         QuantumCircuit::new_multi(&mut [r])
     }
 
+    /// Create a new QuantumCircuit from two QuantumRegisters
     pub fn new2(r0: &mut QuantumRegister, r1: &mut QuantumRegister) -> Self {
         QuantumCircuit::new_multi(&mut [r0, r1])
     }
 
+    /// Get a reference to the Quantum State
     pub fn get_statevector(&self) -> &State {
         &self.state
     }
 
+    /// Add the X gate for a given target to the list of QuantumTransformations
     #[inline]
     pub fn x(&mut self, target: usize) {
         self.add(QuantumTransformation {
@@ -93,6 +117,7 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add the Rx gate for a given target to the list of QuantumTransformations
     #[inline]
     pub fn rx(&mut self, angle: Float, target: usize) {
         self.add(QuantumTransformation {
@@ -102,6 +127,8 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add the CX gate for a given target qubit and control qubit to the list of
+    /// QuantumTransformations
     #[inline]
     pub fn cx(&mut self, control: usize, target: usize) {
         self.add(QuantumTransformation {
@@ -111,6 +138,8 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add the CCX gate for a given target qubit and two control qubits to the list of
+    /// QuantumTransformations
     #[inline]
     pub fn ccx(&mut self, control1: usize, control2: usize, target: usize) {
         self.add(QuantumTransformation {
@@ -120,6 +149,7 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add the Hadamard (H) gate for a given target qubit to the list of QuantumTransformations
     #[inline]
     pub fn h(&mut self, target: usize) {
         self.add(QuantumTransformation {
@@ -129,6 +159,7 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add Ry gate for a given target qubit to the list of QuantumTransformations
     #[inline]
     pub fn ry(&mut self, angle: Float, target: usize) {
         self.add(QuantumTransformation {
@@ -138,6 +169,8 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add CRy gate for a given target qubit and a given control qubit to the list of
+    /// QuantumTransformations
     #[inline]
     pub fn cry(&mut self, angle: Float, control: usize, target: usize) {
         self.add(QuantumTransformation {
@@ -147,6 +180,7 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add Phase (P) gate for a given target qubit to the list of QuantumTransformations
     #[inline]
     pub fn p(&mut self, angle: Float, target: usize) {
         self.add(QuantumTransformation {
@@ -156,6 +190,8 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add the Controlled Phase (CP) gate for a given target qubit and a given control qubit to
+    /// the list of QuantumTransformations
     #[inline]
     pub fn cp(&mut self, angle: Float, control: usize, target: usize) {
         self.add(QuantumTransformation {
@@ -165,6 +201,7 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add Z gate for a given target qubit to the list of QuantumTransformations
     #[inline]
     pub fn z(&mut self, target: usize) {
         self.add(QuantumTransformation {
@@ -174,6 +211,7 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add Rz gate for a given target qubit to the list of QuantumTransformations
     #[inline]
     pub fn rz(&mut self, angle: Float, target: usize) {
         self.add(QuantumTransformation {
@@ -183,6 +221,7 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add all transformations for an inverse Quantum Fourier Transform to the list of QuantumTransformations
     #[inline]
     pub fn iqft(&mut self, targets: &[usize]) {
         for j in (0..targets.len()).rev() {
@@ -193,11 +232,13 @@ impl QuantumCircuit {
         }
     }
 
+    /// Add a given `QuantumTransformation` to the list of transformations
     #[inline]
     pub fn add(&mut self, transformation: QuantumTransformation) {
         self.transformations.push(transformation)
     }
 
+    /// Run the list of transformations against the State
     pub fn execute(&mut self) {
         for tr in self.transformations.drain(..) {
             match (&tr.controls, tr.gate) {

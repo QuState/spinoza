@@ -8,6 +8,7 @@
 #![feature(slice_swap_unchecked)]
 
 pub mod circuit;
+pub mod comm;
 pub mod config;
 pub mod core;
 pub mod gates;

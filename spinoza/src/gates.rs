@@ -33,28 +33,28 @@ impl<T> Clone for SendPtr<T> {
 impl<T> Copy for SendPtr<T> {}
 
 /// Quantum Logic Gates
-/// See https://en.wikipedia.org/wiki/Quantum_logic_gate for more info
+/// See <https://en.wikipedia.org/wiki/Quantum_logic_gate> for more info
 #[derive(Clone, Copy)]
 pub enum Gate {
-    /// Hadamard gate. See https://en.wikipedia.org/wiki/Quantum_logic_gate#Hadamard_gate
+    /// Hadamard gate. See <https://en.wikipedia.org/wiki/Quantum_logic_gate#Hadamard_gate>
     H,
     /// The Pauli-X gate is the quantum equivalent of the NOT gate for classical computers with
     /// respect to the standard basis |0>, |1>. See
-    /// https://en.wikipedia.org/wiki/Quantum_logic_gate#Pauli_gates_(X,Y,Z)
+    /// <https://en.wikipedia.org/wiki/Quantum_logic_gate#Pauli_gates_(X,Y,Z)>
     X,
-    /// See https://en.wikipedia.org/wiki/Quantum_logic_gate#Pauli_gates_(X,Y,Z)
+    /// See <https://en.wikipedia.org/wiki/Quantum_logic_gate#Pauli_gates_(X,Y,Z)>
     Y,
-    /// See https://en.wikipedia.org/wiki/Quantum_logic_gate#Pauli_gates_(X,Y,Z)
+    /// See <https://en.wikipedia.org/wiki/Quantum_logic_gate#Pauli_gates_(X,Y,Z)>
     Z,
-    /// Phase shift gate. See https://en.wikipedia.org/wiki/Quantum_logic_gate#Phase_shift_gates
+    /// Phase shift gate. See <https://en.wikipedia.org/wiki/Quantum_logic_gate#Phase_shift_gates>
     P(Float),
-    /// Rx gate for rotation about the x-axis. See https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates
+    /// Rx gate for rotation about the x-axis. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates>
     RX(Float),
-    /// Ry gate for rotation about the y-axis. See https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates
+    /// Ry gate for rotation about the y-axis. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates>
     RY(Float),
-    /// Rz gate for rotation about the z-axis. See https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates
+    /// Rz gate for rotation about the z-axis. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates>
     RZ(Float),
-    /// General single qubit rotation. See https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Other_named_gates
+    /// General single qubit rotation. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Other_named_gates>
     U((Float, Float, Float)),
 }
 

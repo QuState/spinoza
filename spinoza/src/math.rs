@@ -1,10 +1,10 @@
 //! An assortment of mathematical structures, functions, and constants for quantum state
 //! simulation.
 
-/// An alias for https://doc.rust-lang.org/std/f64/consts/constant.FRAC_1_SQRT_2.html
+/// An alias for <https://doc.rust-lang.org/std/f64/consts/constant.FRAC_1_SQRT_2.html>
 pub const SQRT_ONE_HALF: Float = std::f64::consts::FRAC_1_SQRT_2 as Float;
 
-/// An alias for https://doc.rust-lang.org/std/f64/consts/constant.PI.html
+/// An alias for <https://doc.rust-lang.org/std/f64/consts/constant.PI.html>
 pub const PI: Float = std::f64::consts::PI as Float;
 
 /// The type of floating point number to use for amplitudes
@@ -24,7 +24,7 @@ pub struct Amplitude {
 }
 
 /// The absolute value of a complex number
-/// See https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers
+/// See <https://en.wikipedia.org/wiki/Absolute_value#Complex_numbers>
 #[inline]
 pub fn modulus(z_re: Float, z_im: Float) -> Float {
     (z_re.mul_add(z_re, z_im * z_im)).sqrt()

@@ -6,7 +6,7 @@ use crate::{
 };
 use std::{collections::HashSet, ops::Index};
 
-/// See https://en.wikipedia.org/wiki/Quantum_register
+/// See <https://en.wikipedia.org/wiki/Quantum_register>
 #[derive(Clone)]
 pub struct QuantumRegister(pub Vec<usize>);
 
@@ -71,7 +71,7 @@ pub struct QuantumTransformation {
 }
 
 /// A model of a Quantum circuit
-/// See https://en.wikipedia.org/wiki/Quantum_circuit
+/// See <https://en.wikipedia.org/wiki/Quantum_circuit>
 pub struct QuantumCircuit {
     transformations: Vec<QuantumTransformation>,
     /// The Quantum State to which transformations are applied

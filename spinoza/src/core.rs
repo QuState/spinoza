@@ -47,7 +47,7 @@ impl State {
 }
 
 /// Reservoir for sampling
-/// See https://research.nvidia.com/sites/default/files/pubs/2020-07_Spatiotemporal-reservoir-resampling/ReSTIR.pdf
+/// See <https://research.nvidia.com/sites/default/files/pubs/2020-07_Spatiotemporal-reservoir-resampling/ReSTIR.pdf>
 pub struct Reservoir {
     entries: Vec<usize>,
     w_s: Float,

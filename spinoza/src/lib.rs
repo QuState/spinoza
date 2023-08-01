@@ -13,4 +13,5 @@ pub mod config;
 pub mod core;
 pub mod gates;
 pub mod math;
+pub mod node;
 pub mod utils;

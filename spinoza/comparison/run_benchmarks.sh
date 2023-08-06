@@ -16,7 +16,7 @@ QULACS_PATH=$4
 OUTPUT_DIR=benchmark-data.$(date +"%Y.%m.%d.%H-%M-%S")
 mkdir -p $OUTPUT_DIR/spinoza && mkdir $OUTPUT_DIR/qulacs
 
-gates=("qcbm" "rz" "rx" "x") # "value_encoding" "rz" "rx" "ry" "x" "z" "p" "h")
+gates=("qcbm" "value_encoding" "rz" "rx" "ry" "x" "z" "p" "h")
 
 bm_qulacs_gates () {
     export OMP_NUM_THREADS=$(nproc)

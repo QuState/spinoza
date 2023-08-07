@@ -6,6 +6,8 @@ use crate::{
 };
 use rayon::prelude::*;
 
+const LOW_QUBIT_THRESHOLD: u8 = 15;
+
 // https://github.com/rayon-rs/rayon/blob/master/src/lib.rs
 struct SendPtr<T>(*mut T);
 
@@ -122,7 +124,7 @@ fn x_apply(state: &mut State, target: usize) {
     let state_im = SendPtr(state.imags.as_mut_ptr());
 
     if target == 0 {
-        if Config::global().threads < 2 {
+        if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
             (0..state.len()).step_by(2).for_each(|l0| {
                 x_apply_target_0(state_re, state_im, l0);
             });
@@ -135,7 +137,7 @@ fn x_apply(state: &mut State, target: usize) {
         let end = state.len() >> 1;
         let chunks = end >> target;
 
-        if Config::global().threads < 2 {
+        if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
             (0..chunks).for_each(|chunk| {
                 x_proc_chunk(state_re, state_im, chunk, target);
             });
@@ -155,7 +157,7 @@ fn x_c_apply(state: &mut State, control: usize, target: usize) {
     let dist = 1 << target;
     let marks = (target.min(control), target.max(control));
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..end).for_each(|i| {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
             let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
@@ -223,7 +225,7 @@ fn y_apply(state: &mut State, target: usize) {
     let state_re = SendPtr(state.reals.as_mut_ptr());
     let state_im = SendPtr(state.imags.as_mut_ptr());
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..chunks).for_each(|chunk| {
             y_proc_chunk(state_re, state_im, chunk, target);
         });
@@ -242,7 +244,7 @@ fn y_c_apply_to_range(state: &mut State, control: usize, target: usize) {
     let state_re = SendPtr(state.reals.as_mut_ptr());
     let state_im = SendPtr(state.imags.as_mut_ptr());
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         for i in 0..end {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
             let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
@@ -352,7 +354,7 @@ fn h_apply(state: &mut State, target: usize) {
     let end = state.len() >> 1;
     let chunks = end >> target;
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..chunks).for_each(|c| {
             h_apply_concat(state, c, target);
         });
@@ -441,7 +443,7 @@ fn rx_apply(state: &mut State, target: usize, angle: Float) {
     let nst = -Float::sin(theta);
 
     if target == 0 {
-        if Config::global().threads < 2 {
+        if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
             (0..state.len()).step_by(2).for_each(|l| {
                 rx_apply_target_0(state_re, state_im, l, ct, nst);
             })
@@ -453,7 +455,7 @@ fn rx_apply(state: &mut State, target: usize, angle: Float) {
     } else {
         let end = state.len() >> 1;
         let chunks = end >> target;
-        if Config::global().threads < 2 {
+        if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
             (0..chunks).for_each(|chunk| {
                 rx_proc_chunk(state_re, state_im, chunk, target, ct, nst);
             });
@@ -477,7 +479,7 @@ fn rx_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     let dist = 1 << target;
     let marks = (target.min(control), target.max(control));
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..end).for_each(|i| {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
             let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
@@ -534,7 +536,7 @@ fn p_apply(state: &mut State, target: usize, angle: Float) {
     let end = state.len() >> 1;
     let chunks = end >> target;
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..chunks).for_each(|chunk| {
             p_proc_chunk(state, chunk, target, cos, sin);
         });
@@ -552,7 +554,7 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     let end = state.len() >> 2;
     let marks = (target.min(control), target.max(control));
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         for i in 0..end {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
             let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
@@ -580,7 +582,7 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
     let chunk_size = 1 << target;
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         state
             .reals
             .chunks_exact_mut(chunk_size)
@@ -656,7 +658,7 @@ fn z_apply(state: &mut State, target: usize) {
     // NOTE: chunks == end >> target, where end == state.len() >> 1
     let chunks = state.len() >> (target + 1);
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..chunks).for_each(|c| z_proc_chunk(state, c, target));
     } else {
         let state_re = SendPtr(state.reals.as_mut_ptr());
@@ -710,7 +712,7 @@ fn ry_apply(state: &mut State, target: usize, angle: Float) {
     let state_re = SendPtr(state.reals.as_mut_ptr());
     let state_im = SendPtr(state.imags.as_mut_ptr());
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..chunks).for_each(|chunk| {
             ry_apply_strategy2(state_re, state_im, chunk, target, sin, cos);
         });
@@ -731,7 +733,7 @@ fn ry_c_apply_strategy3(state: &mut State, control: usize, target: usize, angle:
     let state_re = SendPtr(state.reals.as_mut_ptr());
     let state_im = SendPtr(state.imags.as_mut_ptr());
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         for i in 0..end {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
             let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
@@ -866,7 +868,7 @@ fn u_apply(state: &mut State, target: usize, theta: Float, phi: Float, lambda: F
     let state_re = SendPtr(state.reals.as_mut_ptr());
     let state_im = SendPtr(state.imags.as_mut_ptr());
 
-    if Config::global().threads < 2 {
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..chunks).for_each(|chunk| {
             u_apply_strategy2(state_re, state_im, &g, chunk, target);
         });

@@ -10,8 +10,8 @@ fn x(n: usize, show_results: bool) {
     let now = std::time::Instant::now();
     let mut state = State::new(n);
 
-    for i in 0..n {
-        apply(Gate::X, &mut state, i);
+    for t in 0..n {
+        apply(Gate::X, &mut state, t);
     }
 
     let elapsed = now.elapsed().as_micros();

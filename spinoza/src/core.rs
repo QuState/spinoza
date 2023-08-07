@@ -1,3 +1,4 @@
+//! Abstractions for representing a Quantum State
 use crate::{
     config::Config,
     gates::{apply, c_apply, Gate},
@@ -7,16 +8,23 @@ use once_cell::sync::OnceCell;
 use rand::prelude::*;
 use std::collections::HashMap;
 
+/// Reference to the Config for user passed config args
 pub static CONFIG: OnceCell<Config> = OnceCell::new();
 
 #[derive(Clone)]
+/// Representation of a Quantum State. Amplitudes are split between two vectors.
 pub struct State {
+    /// The real components of the state.
     pub reals: Vec<Float>,
+    /// The imaginary components of the state.
     pub imags: Vec<Float>,
+    /// The number of qubits represented by the state.
     pub n: u8,
 }
 
 impl State {
+    /// Create a new State. The state will always be of size 2^{n},
+    /// where n is the number of qubits. Note that n cannot be 0.
     pub fn new(n: usize) -> Self {
         assert!(n > 0);
         let mut reals = vec![0.0; 1 << n];
@@ -29,18 +37,24 @@ impl State {
         }
     }
 
+    /// Get the size of the state vector. Size of the state should always be
+    /// 2^{n}, where n is the number of qubits.
+    #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
         self.imags.len()
     }
 }
 
+/// Reservoir for sampling
+/// See <https://research.nvidia.com/sites/default/files/pubs/2020-07_Spatiotemporal-reservoir-resampling/ReSTIR.pdf>
 pub struct Reservoir {
-    pub entries: Vec<usize>,
+    entries: Vec<usize>,
     w_s: Float,
 }
 
 impl Reservoir {
+    /// Create a new reservoir for sampling
     pub fn new(k: usize) -> Self {
         Self {
             entries: vec![0; k],
@@ -65,6 +79,7 @@ impl Reservoir {
         modulus(z_re, z_im).powi(2)
     }
 
+    /// Run the sampling based on the given State
     pub fn sampling(&mut self, reals: &[Float], imags: &[Float], m: usize) {
         let mut rng = thread_rng();
         let mut outcomes = (0..reals.len()).cycle();
@@ -75,6 +90,7 @@ impl Reservoir {
         }
     }
 
+    /// Create a histogram of the counts for each outcome
     pub fn get_outcome_count(&self) -> HashMap<usize, usize> {
         let mut samples = HashMap::new();
         for entry in self.entries.iter() {
@@ -84,48 +100,13 @@ impl Reservoir {
     }
 }
 
+/// Convenience function for running reservoir sampling
 pub fn reservoir_sampling(state: &State, k: usize) -> Reservoir {
     let m = 1 << 10;
     let mut reservoir = Reservoir::new(k);
     reservoir.sampling(&state.reals, &state.imags, m);
     reservoir
 }
-
-// TODO(Saveliy Yusufov): get multiple reservoirs working to parallelize measurement
-// pub fn multi_reservoir_sampling(state: &State, k: usize) -> Reservoir {
-//     let cpus = num_cpus::get();
-//     let m = 1 << 10;
-//
-//     let mut reservoirs: Vec<Reservoir> = (0..cpus).map(|_| Reservoir::new(k)).collect();
-//
-//     let mut i = 0;
-//     for (chunk_reals, chunk_imags) in state.reals.chunks(cpus).zip(state.imags.chunks(cpus)) {
-//         reservoirs[i].sampling(chunk_reals, chunk_imags, m);
-//         i += 1;
-//     }
-//
-//     reservoirs
-//         .into_iter()
-//         .fold(Reservoir::new(k), |r0, r1| merge_reservoirs(&r0, &r1, k))
-// }
-//
-// fn merge_reservoirs(r0: &Reservoir, r1: &Reservoir, k: usize) -> Reservoir {
-//     let mut rng = thread_rng();
-//     let mut res = Reservoir::new(k);
-//
-//     let (w_0, w_1) = (r0.w_s, r1.w_s);
-//     let prob = w_0 / (w_0 + w_1);
-//
-//     for i in 0..k {
-//         let epsilon_i: Float = rng.gen();
-//         if epsilon_i <= prob {
-//             res.entries[i] = r0.entries[i];
-//         } else {
-//             res.entries[i] = r1.entries[i];
-//         }
-//     }
-//     res
-// }
 
 // pub fn g_proc(
 //     state: &mut State,
@@ -179,12 +160,14 @@ pub fn reservoir_sampling(state: &State, k: usize) -> Reservoir {
 //     g_proc(data, range, gate, &marks, zeros, dist);
 // }
 
+/// Swap using controlled X gates
 pub fn swap(state: &mut State, first: usize, second: usize) {
     c_apply(Gate::X, state, first, second);
     c_apply(Gate::X, state, second, first);
     c_apply(Gate::X, state, first, second);
 }
 
+/// Inverse Quantum Fourier transform
 pub fn iqft(state: &mut State, targets: &[usize]) {
     for j in (0..targets.len()).rev() {
         apply(Gate::H, state, targets[j]);

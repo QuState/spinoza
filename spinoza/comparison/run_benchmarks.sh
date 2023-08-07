@@ -19,7 +19,7 @@ mkdir -p $OUTPUT_DIR/spinoza && mkdir $OUTPUT_DIR/qulacs
 gates=("qcbm" "value_encoding" "rz" "rx" "ry" "x" "z" "p" "h")
 
 bm_qulacs_gates () {
-    export OMP_NUM_THREADS=1
+    export OMP_NUM_THREADS=$(nproc)
     make all QULACS_PATH=$QULACS_PATH -j $(nproc)
 
     for g in ${gates[@]}; do
@@ -39,7 +39,7 @@ bm_rust_gates () {
         for n in $(seq $START_QUBITS $END_QUBITS); do
             echo "running rust benchmark for $g with $n qubits" && \
                 for i in $(seq 1 $ITERS); do
-                    ../../target/release/examples/${g} --qubits ${n} >> ${OUTPUT_DIR}/spinoza/${g}-${n}qubits
+                    ../../target/release/examples/${g} --qubits ${n} --threads $(nproc) >> ${OUTPUT_DIR}/spinoza/${g}-${n}qubits
                 done
             done
         done

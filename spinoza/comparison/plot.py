@@ -19,31 +19,6 @@ def read_file(filepath: str) -> list[int]:
     return y
 
 
-def ratio_plot() -> None:
-    fig, axs = plt.subplots(8, figsize=(7, 20))
-    fig.subplots_adjust(
-        left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.5
-    )
-    fig.suptitle("Rust vs. Qulacs C++")
-
-    for i in range(1, 9):
-        x1, y1 = read_file(f"/tmp/cpp-qulacs-benchmark-{i}threads")
-        x2, y2 = read_file(f"/tmp/rust-quantum-benchmark-{i}threads")
-        x1, y1 = x1[16:], y1[16:]
-        x2, y2 = x2[16:], y2[16:]
-        y = [y_i / y_j for (y_i, y_j) in zip(y2, y1)]
-        axs[i - 1].plot(x1, y, label=f"{i}-threads")
-        axs[i - 1].set_xlabel("qubits", fontsize=10)
-        axs[i - 1].set_ylabel("ratio", fontsize=10)
-        axs[i - 1].set_title(f"{i} threads", fontsize=10)
-
-    # plt.xlabel("qubits")
-    # plt.ylabel("ratio")
-    # plt.legend(fontsize="xx-small")
-    # plt.title("Rust vs. Qulacs C++ w/ 8 threads")
-    plt.savefig("ratio-plot.png", dpi=600)
-
-
 def plot_gate(path: str, qubit_range: tuple[int, int], gate: str, latex=False) -> None:
     qubits = range(*qubit_range)
     i = 0

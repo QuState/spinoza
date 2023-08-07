@@ -1,3 +1,4 @@
+//! The rust core of Spinoza
 #![warn(clippy::complexity)]
 #![warn(missing_docs)]
 #![warn(clippy::style)]

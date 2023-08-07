@@ -20,7 +20,7 @@ jobs:
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
-        continue-on-error: true  # WARNING: only for this example, remove it!
+          # continue-on-error: true  # WARNING: only for this example, remove it!
         with:
           command: clippy
           args: -- -D warnings
@@ -42,7 +42,7 @@ jobs:
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
-        continue-on-error: true  # WARNING: only for this example, remove it!
+          # continue-on-error: true  # WARNING: only for this example, remove it!
         with:
           command: fmt
           args: --all -- --check
@@ -63,6 +63,6 @@ jobs:
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
-        continue-on-error: true  # WARNING: only for this example, remove it!
+          # continue-on-error: true  # WARNING: only for this example, remove it!
         with:
           command: test

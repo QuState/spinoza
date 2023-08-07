@@ -28,11 +28,6 @@ void rz(int n) {
     auto t2 = high_resolution_clock::now();
     auto us_int = duration_cast<microseconds>(t2 - t1);
     std::cout << FormatWithCommas(us_int.count()) << "\n";
-
-    // const CPPCTYPE* raw_data_cpp = state.data_cpp();
-    // for (int i = 0; i < std::min(16, (1 << n)); i++) {
-    //     std::cout << raw_data_cpp[i] << std::endl;
-    // }
 }
 
 int main(int argc, char** argv) {

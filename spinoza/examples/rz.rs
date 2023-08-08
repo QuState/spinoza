@@ -10,8 +10,8 @@ fn rz(n: usize, show_results: bool) {
     let now = std::time::Instant::now();
     let mut state = State::new(n);
 
-    for i in 0..n {
-        apply(Gate::RZ(1.0), &mut state, i);
+    for t in 0..n {
+        apply(Gate::RZ(1.0), &mut state, t);
     }
 
     let elapsed = now.elapsed().as_micros();

@@ -7,8 +7,9 @@ use spinoza::{
 };
 
 pub fn qcbm_functional(n: usize, show_results: bool) {
-    let now = std::time::Instant::now();
     let pairs: Vec<_> = (0..n).into_iter().map(|i| (i, (i + 1) % n)).collect();
+
+    let now = std::time::Instant::now();
     let mut state: State = State::new(n);
 
     for i in 0..n {

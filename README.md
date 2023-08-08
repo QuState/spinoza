@@ -41,36 +41,20 @@ cargo run --release --example <example-name> -- -q <num-qubits>
 
 For example:
 ```bash
-cargo run --release --example rx -- -q 20
+cargo run --release --example rx -- --threads $(nproc) --qubits 20
 
-cargo run --release --example ry -- -q 20
+cargo run --release --example ry -- --threads $(nproc) --qubits 20
 
-cargo run --release --example rz -- -q 20
+cargo run --release --example rz -- --threads $(nproc) --qubits 20
 
-cargo run --release --example x -- -q 20
+cargo run --release --example x -- --threads $(nproc) --qubits 20
 
-cargo run --release --example z -- -q 20
+cargo run --release --example z -- --threads $(nproc) --qubits 20
 
-cargo run --release --example p -- -q 20
+cargo run --release --example p -- --threads $(nproc) --qubits 20
 ```
 
 ___
-
-## Benchmarks
-
-### Single-Threaded Benchmarks
-
-```bash
-cd spinoza/comparison
-./run_benchmarks.sh <start-qubits> <end-qubits> <iters> <qulacs-absolute-path>
-```
-
-To reproduce the results from the [paper](https://arxiv.org/pdf/2303.01493.pdf),
-run:
-```bash
-cd spinoza/comparison
-./run_benchmarks.sh 4 26 10 <qulacs-absolute-path>
-```
 
 ## References
 ```

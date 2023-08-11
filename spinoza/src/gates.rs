@@ -846,7 +846,7 @@ fn u_apply(state: &mut State, target: usize, theta: Float, phi: Float, lambda: F
     let (st, ct) = Float::sin_cos(theta * 0.5);
     let (sl, cl) = Float::sin_cos(lambda);
     let (spl, cpl) = Float::sin_cos(phi + lambda);
-    let cp = Float::cos(phi);
+    let (sp, cp) = Float::sin_cos(phi);
 
     let c = Amplitude { re: ct, im: 0.0 };
     let ncs = Amplitude {
@@ -855,7 +855,7 @@ fn u_apply(state: &mut State, target: usize, theta: Float, phi: Float, lambda: F
     };
     let es = Amplitude {
         re: cp * st,
-        im: sl * st,
+        im: sp * st,
     };
     let ec = Amplitude {
         re: cpl * ct,
@@ -1234,5 +1234,32 @@ mod tests {
 
         assert_float_closeness(state.reals[7], -0.1090926263889472, 1e-10);
         assert_float_closeness(state.imags[7], 0.015550776766638148, 1e-10);
+    }
+
+    #[test]
+    fn u_gate_1_qubit() {
+        let mut state = State::new(1);
+
+        let lambda = 1.0;
+        let theta = 2.0;
+        let phi = 3.0;
+
+        apply(Gate::U((theta, phi, lambda)), &mut state, 0);
+        assert_float_closeness(state.reals[0], 0.5403023058681398, 1e-10);
+        assert_float_closeness(state.imags[0], 0.0, 1e-10);
+
+        assert_float_closeness(state.reals[1], -0.833049961066805, 1e-10);
+        assert_float_closeness(state.imags[1], 0.11874839215823475, 1e-10);
+
+        // Check other base vector
+        let mut state = State::new(1);
+        apply(Gate::X, &mut state, 0);
+        apply(Gate::U((theta, phi, lambda)), &mut state, 0);
+
+        assert_float_closeness(state.reals[0], -0.4546487134128409, 1e-10);
+        assert_float_closeness(state.imags[0], -0.7080734182735712, 1e-10);
+
+        assert_float_closeness(state.reals[1], -0.35316515556860967, 1e-10);
+        assert_float_closeness(state.imags[1], -0.4089021333016357, 1e-10);
     }
 }

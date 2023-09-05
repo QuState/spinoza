@@ -3,7 +3,7 @@ use spinoza::{
     config::{Config, QSArgs},
     core::{State, CONFIG},
     gates::{apply, Gate},
-    utils::{pretty_print_int, to_table},
+    utils::pretty_print_int,
 };
 
 fn rz(n: usize, show_results: bool) {
@@ -16,9 +16,6 @@ fn rz(n: usize, show_results: bool) {
 
     let elapsed = now.elapsed().as_micros();
     println!("{}", pretty_print_int(elapsed));
-    if show_results {
-        to_table(&state);
-    }
 }
 
 fn main() {

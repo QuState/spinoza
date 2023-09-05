@@ -1,4 +1,5 @@
 //! The rust core of Spinoza
+#![feature(portable_simd)]
 #![warn(clippy::complexity)]
 #![warn(missing_docs)]
 #![warn(clippy::style)]

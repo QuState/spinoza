@@ -3,6 +3,8 @@
 [![Build](https://github.com/QuState/spinoza/actions/workflows/rust.yml/badge.svg)](https://github.com/QuState/spinoza/actions/workflows/rust.yml)
 [![Spinoza documentation](https://img.shields.io/badge/docs-passing-brightgreen)](https://qustate.github.io/doc/spinoza/)
 
+![ALT TEXT](assets/logo.png)
+
 ## Getting Started
 
 ### Prerequisites

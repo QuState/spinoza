@@ -1,9 +1,9 @@
-# Spinoza
-
 [![Build](https://github.com/QuState/spinoza/actions/workflows/rust.yml/badge.svg)](https://github.com/QuState/spinoza/actions/workflows/rust.yml)
 [![Spinoza documentation](https://img.shields.io/badge/docs-passing-brightgreen)](https://qustate.github.io/doc/spinoza/)
 
-![ALT TEXT](assets/logo.png)
+![ALT TEXT](assets/logo.png){height=400px width=500px}
+
+
 
 ## Getting Started
 

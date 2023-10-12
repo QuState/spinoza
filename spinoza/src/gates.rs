@@ -88,24 +88,24 @@ pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
 }
 
 /// Two Controls, Single Target
-pub fn cc_apply(gate: Gate, state: &mut State, control0: usize, control1: usize, target: usize) {
+pub fn cc_apply(gate: Gate, state: &mut State, contros0: usize, contros1: usize, target: usize) {
     match gate {
-        Gate::X => x_cc_apply(state, control0, control1, target),
+        Gate::X => x_cc_apply(state, contros0, contros1, target),
         _ => todo!(),
     }
 }
 
-fn x_apply_target_0(state_re: SendPtr<Float>, state_im: SendPtr<Float>, l0: usize) {
+fn x_apply_target_0(state_re: SendPtr<Float>, state_im: SendPtr<Float>, s0: usize) {
     unsafe {
-        std::ptr::swap(state_re.get().add(l0), state_re.get().add(l0 + 1));
-        std::ptr::swap(state_im.get().add(l0), state_im.get().add(l0 + 1));
+        std::ptr::swap(state_re.get().add(s0), state_re.get().add(s0 + 1));
+        std::ptr::swap(state_im.get().add(s0), state_im.get().add(s0 + 1));
     }
 }
 
-fn x_apply_target(state_re: SendPtr<Float>, state_im: SendPtr<Float>, l0: usize, l1: usize) {
+fn x_apply_target(state_re: SendPtr<Float>, state_im: SendPtr<Float>, s0: usize, s1: usize) {
     unsafe {
-        std::ptr::swap(state_re.get().add(l0), state_re.get().add(l1));
-        std::ptr::swap(state_im.get().add(l0), state_im.get().add(l1));
+        std::ptr::swap(state_re.get().add(s0), state_re.get().add(s1));
+        std::ptr::swap(state_im.get().add(s0), state_im.get().add(s1));
     }
 }
 
@@ -113,9 +113,9 @@ fn x_proc_chunk(state_re: SendPtr<Float>, state_im: SendPtr<Float>, chunk: usize
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {
-        let l0 = base + i;
-        let l1 = l0 + dist;
-        x_apply_target(state_re, state_im, l0, l1)
+        let s0 = base + i;
+        let s1 = s0 + dist;
+        x_apply_target(state_re, state_im, s0, s1)
     }
 }
 
@@ -125,12 +125,12 @@ fn x_apply(state: &mut State, target: usize) {
 
     if target == 0 {
         if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
-            (0..state.len()).step_by(2).for_each(|l0| {
-                x_apply_target_0(state_re, state_im, l0);
+            (0..state.len()).step_by(2).for_each(|s0| {
+                x_apply_target_0(state_re, state_im, s0);
             });
         } else {
-            (0..state.len()).into_par_iter().step_by(2).for_each(|l0| {
-                x_apply_target_0(state_re, state_im, l0);
+            (0..state.len()).into_par_iter().step_by(2).for_each(|s0| {
+                x_apply_target_0(state_re, state_im, s0);
             });
         }
     } else {
@@ -160,37 +160,37 @@ fn x_c_apply(state: &mut State, control: usize, target: usize) {
     if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..end).for_each(|i| {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-            let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-            let l0 = l1 - dist;
-            x_apply_target(state_re, state_im, l0, l1);
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let s0 = s1 - dist;
+            x_apply_target(state_re, state_im, s0, s1);
         });
     } else {
         (0..end).into_par_iter().for_each(|i| {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-            let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-            let l0 = l1 - dist;
-            x_apply_target(state_re, state_im, l0, l1);
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let s0 = s1 - dist;
+            x_apply_target(state_re, state_im, s0, s1);
         });
     }
 }
 
-fn x_cc_apply(state: &mut State, control0: usize, control1: usize, target: usize) {
+fn x_cc_apply(state: &mut State, contros0: usize, contros1: usize, target: usize) {
     let mut i = 0;
     let dist = 1 << target;
 
     while i < state.len() {
-        let c0c1_set = (((i >> control0) & 1) != 0) && (((i >> control1) & 1) != 0);
+        let c0c1_set = (((i >> contros0) & 1) != 0) && (((i >> contros1) & 1) != 0);
         if c0c1_set {
-            let l0 = i;
-            let l1 = i + dist;
+            let s0 = i;
+            let s1 = i + dist;
             unsafe {
-                let temp0 = *state.reals.get_unchecked(l0);
-                *state.reals.get_unchecked_mut(l0) = *state.reals.get_unchecked(l1);
-                *state.reals.get_unchecked_mut(l1) = temp0;
+                let temp0 = *state.reals.get_unchecked(s0);
+                *state.reals.get_unchecked_mut(s0) = *state.reals.get_unchecked(s1);
+                *state.reals.get_unchecked_mut(s1) = temp0;
 
-                let temp1 = *state.imags.get_unchecked(l0);
-                *state.imags.get_unchecked_mut(l0) = *state.imags.get_unchecked(l1);
-                *state.imags.get_unchecked_mut(l1) = temp1;
+                let temp1 = *state.imags.get_unchecked(s0);
+                *state.imags.get_unchecked_mut(s0) = *state.imags.get_unchecked(s1);
+                *state.imags.get_unchecked_mut(s1) = temp1;
             };
             i += dist;
         }
@@ -395,25 +395,25 @@ fn rx_apply_target_0(
 fn rx_apply_target(
     state_re: SendPtr<Float>,
     state_im: SendPtr<Float>,
-    l0: usize,
-    l1: usize,
+    s0: usize,
+    s1: usize,
     cos: Float,
     neg_sin: Float,
 ) {
     unsafe {
         // a + ib
-        let a = *state_re.get().add(l0);
-        let b = *state_im.get().add(l0);
+        let a = *state_re.get().add(s0);
+        let b = *state_im.get().add(s0);
 
         // c + id
-        let c = *state_re.get().add(l1);
-        let d = *state_im.get().add(l1);
+        let c = *state_re.get().add(s1);
+        let d = *state_im.get().add(s1);
 
-        *state_re.get().add(l0) = a * cos - d * neg_sin;
-        *state_im.get().add(l0) = b * cos + c * neg_sin;
+        *state_re.get().add(s0) = a * cos - d * neg_sin;
+        *state_im.get().add(s0) = b * cos + c * neg_sin;
 
-        *state_re.get().add(l1) = b * -neg_sin + c * cos;
-        *state_im.get().add(l1) = d * cos + a * neg_sin;
+        *state_re.get().add(s1) = b * -neg_sin + c * cos;
+        *state_im.get().add(s1) = d * cos + a * neg_sin;
     }
 }
 
@@ -428,9 +428,9 @@ fn rx_proc_chunk(
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {
-        let l0 = base + i;
-        let l1 = l0 + dist;
-        rx_apply_target(state_re, state_im, l0, l1, cos, neg_sin);
+        let s0 = base + i;
+        let s1 = s0 + dist;
+        rx_apply_target(state_re, state_im, s0, s1, cos, neg_sin);
     }
 }
 
@@ -482,16 +482,16 @@ fn rx_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..end).for_each(|i| {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-            let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-            let l0 = l1 - dist;
-            rx_apply_target(state_re, state_im, l0, l1, ct, nst);
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let s0 = s1 - dist;
+            rx_apply_target(state_re, state_im, s0, s1, ct, nst);
         });
     } else {
         (0..end).into_par_iter().for_each(|i| {
             let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
-            let l1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
-            let l0 = l1 - dist;
-            rx_apply_target(state_re, state_im, l0, l1, ct, nst);
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let s0 = s1 - dist;
+            rx_apply_target(state_re, state_im, s0, s1, ct, nst);
         });
     }
 }
@@ -836,9 +836,9 @@ fn u_apply_strategy2(
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {
-        let l0 = base + i;
-        let l1 = l0 + dist;
-        u_apply_target(state_re, state_im, g, l0, l1);
+        let s0 = base + i;
+        let s1 = s0 + dist;
+        u_apply_target(state_re, state_im, g, s0, s1);
     }
 }
 

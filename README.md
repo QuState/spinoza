@@ -1,9 +1,11 @@
 [![Build](https://github.com/QuState/spinoza/actions/workflows/rust.yml/badge.svg)](https://github.com/QuState/spinoza/actions/workflows/rust.yml)
 [![Spinoza documentation](https://img.shields.io/badge/docs-passing-brightgreen)](https://qustate.github.io/doc/spinoza/)
 
-<img src="assets/logo.png" width="500">
+<p align="center">
+<img src="assets/logo.png" width="400">
+</p>
 
-Spinoza, is a fast and flexible quantum simulator written exclusively in Rust,
+Spinoza is a fast and flexible quantum simulator written exclusively in Rust,
 with bindings available for Python users. Spinoza simulates the evolution of a
 quantum system’s state by applying quantum gates, with the core design
 principle being that a single-qubit gate applied to a target qubit preserves
@@ -53,15 +55,10 @@ cargo run --release --example <example-name> -- -q <num-qubits>
 For example:
 ```bash
 cargo run --release --example rx -- --threads $(nproc) --qubits 20
-
 cargo run --release --example ry -- --threads $(nproc) --qubits 20
-
 cargo run --release --example rz -- --threads $(nproc) --qubits 20
-
 cargo run --release --example x -- --threads $(nproc) --qubits 20
-
 cargo run --release --example z -- --threads $(nproc) --qubits 20
-
 cargo run --release --example p -- --threads $(nproc) --qubits 20
 ```
 

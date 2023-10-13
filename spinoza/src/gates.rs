@@ -115,6 +115,12 @@ fn x_proc_chunk(state_re: SendPtr<Float>, state_im: SendPtr<Float>, chunk: usize
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
+
+        unsafe {
+            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
+            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
+        }
+
         x_apply_target(state_re, state_im, s0, s1)
     }
 }
@@ -206,6 +212,9 @@ fn y_proc_chunk(state_re: SendPtr<Float>, state_im: SendPtr<Float>, chunk: usize
         let s1 = s0 + dist;
 
         unsafe {
+            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
+            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
+
             std::ptr::swap(state_re.get().add(s0), state_re.get().add(s1));
             std::ptr::swap(state_im.get().add(s0), state_im.get().add(s1));
 
@@ -285,13 +294,18 @@ fn y_c_apply(state: &mut State, control: usize, target: usize) {
     y_c_apply_to_range(state, control, target);
 }
 
-/// Apply H gate via Concatenation strategy (i.e., Strategy 2)
-fn h_apply_concat(state: &mut State, chunk: usize, target: usize) {
+/// Apply H gate via strategy 2
+fn h_apply_strat2(state: &mut State, chunk: usize, target: usize) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
+
+        unsafe {
+            std::intrinsics::prefetch_write_data(state.reals.get_unchecked(s1 + 1), 3);
+            std::intrinsics::prefetch_write_data(state.imags.get_unchecked(s1 + 1), 3);
+        }
 
         let (a, b, c, d) = unsafe {
             let a = *state.reals.get_unchecked(s0);
@@ -315,7 +329,7 @@ fn h_apply_concat(state: &mut State, chunk: usize, target: usize) {
     }
 }
 
-fn h_apply_concat_par(
+fn h_apply_strat2_par(
     state_re: SendPtr<Float>,
     state_im: SendPtr<Float>,
     chunk: usize,
@@ -327,6 +341,11 @@ fn h_apply_concat_par(
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
+
+        unsafe {
+            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
+            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
+        }
 
         let (a, b, c, d) = unsafe {
             let a = *state_re.get().add(s0);
@@ -356,14 +375,14 @@ fn h_apply(state: &mut State, target: usize) {
 
     if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
         (0..chunks).for_each(|c| {
-            h_apply_concat(state, c, target);
+            h_apply_strat2(state, c, target);
         });
     } else {
         let state_re = SendPtr(state.reals.as_mut_ptr());
         let state_im = SendPtr(state.imags.as_mut_ptr());
 
         (0..chunks).into_par_iter().for_each(|c| {
-            h_apply_concat_par(state_re, state_im, c, target);
+            h_apply_strat2_par(state_re, state_im, c, target);
         });
     }
 }
@@ -430,6 +449,10 @@ fn rx_proc_chunk(
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
+        unsafe {
+            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
+            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
+        }
         rx_apply_target(state_re, state_im, s0, s1, cos, neg_sin);
     }
 }
@@ -683,6 +706,11 @@ fn ry_apply_strategy2(
         let s0 = base + i;
         let s1 = s0 + dist;
 
+        unsafe {
+            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
+            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
+        }
+
         let (a, b, c, d) = unsafe {
             // a + ib
             let a = *state_re.get().add(s0);
@@ -838,6 +866,10 @@ fn u_apply_strategy2(
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
+        unsafe {
+            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
+            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
+        }
         u_apply_target(state_re, state_im, g, s0, s1);
     }
 }

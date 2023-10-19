@@ -1,8 +1,12 @@
-use crate::{core::State, math::modulus};
+use crate::{
+    core::State,
+    gates::{apply, Gate},
+    math::modulus,
+};
 use rand_distr::{Binomial, Distribution};
 
 /// Single qubit measurement
-pub fn measure_qubit(state: &mut State, target: usize, v: Option<u64>) {
+pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u64>) {
     let mut prob0 = 0.0;
     let mut prob1 = 0.0;
     let num_pairs = state.len() >> 1;
@@ -16,12 +20,11 @@ pub fn measure_qubit(state: &mut State, target: usize, v: Option<u64>) {
         prob1 += modulus(state.reals[s1], state.imags[s1]).powi(2);
     }
 
-    let bin = Binomial::new(1, prob1).unwrap();
-
     let val = if let Some(_v) = v {
         assert!(_v == 0 || _v == 1);
         _v
     } else {
+        let bin = Binomial::new(1, prob1).unwrap();
         bin.sample(&mut rand::thread_rng())
     };
 
@@ -45,5 +48,59 @@ pub fn measure_qubit(state: &mut State, target: usize, v: Option<u64>) {
             state.reals[s1] = 0.0;
             state.imags[s1] = 0.0;
         }
+
+        if reset {
+            apply(Gate::X, state, target);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::{assert_float_closeness, gen_random_state};
+
+    #[test]
+    fn test_measure_qubit() {
+        let mut state = gen_random_state(3);
+
+        let sum = state
+            .reals
+            .iter()
+            .zip(state.imags.iter())
+            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .sum();
+
+        assert_float_closeness(sum, 1.0, 0.001);
+
+        measure_qubit(&mut state, 0, true, Some(0));
+        let sum = state
+            .reals
+            .iter()
+            .zip(state.imags.iter())
+            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .sum();
+
+        assert_float_closeness(sum, 1.0, 0.001);
+
+        measure_qubit(&mut state, 1, true, Some(0));
+        let sum = state
+            .reals
+            .iter()
+            .zip(state.imags.iter())
+            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .sum();
+
+        assert_float_closeness(sum, 1.0, 0.001);
+
+        measure_qubit(&mut state, 2, true, Some(1));
+        let sum = state
+            .reals
+            .iter()
+            .zip(state.imags.iter())
+            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .sum();
+
+        assert_float_closeness(sum, 1.0, 0.001);
     }
 }

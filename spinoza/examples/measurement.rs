@@ -19,7 +19,7 @@ fn h(n: usize, show_results: bool) {
     println!("{}", pretty_print_int(elapsed));
 
     let now = std::time::Instant::now();
-    measure_qubit(&mut state, n - 1, Some(1));
+    measure_qubit(&mut state, n - 1, true, Some(1));
     let elapsed = now.elapsed().as_micros();
     println!("{}", pretty_print_int(elapsed));
 }

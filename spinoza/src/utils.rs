@@ -1,7 +1,6 @@
 //! An assortment of utility functions for visualizing, benchmarking, and testing.
 use crate::{
     core::State,
-    gates::Gate,
     math::{modulus, Float, PI},
 };
 use comfy_table::{

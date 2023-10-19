@@ -1,3 +1,4 @@
+//! Functionality for measurement
 use crate::{
     core::State,
     gates::{apply, Gate},

@@ -1,4 +1,4 @@
-//! Abstractions for a quantum logic gates
+//! Abstractions for quantum logic gates
 use crate::{
     config::Config,
     core::State,

@@ -8,6 +8,8 @@ use comfy_table::{
     Color::Rgb,
     {Cell, Color, Table},
 };
+use rand::distributions::Uniform;
+use rand::prelude::*;
 
 /// Formats an unsigned, 128 bit integer with commas, as a string. Used for readability
 pub fn pretty_print_int(i: u128) -> String {
@@ -16,7 +18,7 @@ pub fn pretty_print_int(i: u128) -> String {
     }
 
     // u128::MAX == 340_282_366_920_938_463_463_374_607_431_768_211_455
-    // len(340_282_366_920_938_463_463_374_607_431_768_211_455") == 51
+    // len("340_282_366_920_938_463_463_374_607_431_768_211_455") == 51
     let mut q = arrayvec::ArrayVec::<u8, 51>::new();
 
     let mut x = i;
@@ -178,6 +180,42 @@ pub fn balanced_ranges(
 /// Asserts that two floating point numbers are approximately equal.
 pub fn assert_float_closeness(actual: Float, expected: Float, epsilon: Float) {
     assert!((actual - expected).abs() < epsilon);
+}
+
+/// Generates a random quantum state
+pub fn gen_random_state(n: usize) -> State {
+    assert!(n > 0);
+    let mut rng = rand::thread_rng();
+    let between = Uniform::from(0.0..1.0);
+    let angle_dist = Uniform::from(0.0..2.0 * PI);
+    let num_amps = 1 << n;
+
+    let mut probs: Vec<_> = (0..num_amps).map(|_| between.sample(&mut rng)).collect();
+
+    let total: Float = probs.iter().sum();
+    let total_recip = total.recip();
+
+    probs.iter_mut().for_each(|p| *p *= total_recip);
+
+    let angles = (0..num_amps).map(|_| angle_dist.sample(&mut rng));
+
+    let mut reals = Vec::with_capacity(num_amps);
+    let mut imags = Vec::with_capacity(num_amps);
+
+    probs.iter().zip(angles).for_each(|(p, a)| {
+        let p_sqrt = p.sqrt();
+        let (sin_a, cos_a) = a.sin_cos();
+        let re = p_sqrt * cos_a;
+        let im = p_sqrt * sin_a;
+        reals.push(re);
+        imags.push(im);
+    });
+
+    State {
+        reals,
+        imags,
+        n: n.try_into().unwrap(),
+    }
 }
 
 #[cfg(test)]

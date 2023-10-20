@@ -6,7 +6,7 @@ use crate::{
 };
 use once_cell::sync::OnceCell;
 use rand::prelude::*;
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt};
 
 /// Reference to the Config for user passed config args
 pub static CONFIG: OnceCell<Config> = OnceCell::new();
@@ -43,6 +43,18 @@ impl State {
     #[inline]
     pub fn len(&self) -> usize {
         self.imags.len()
+    }
+}
+
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.reals
+            .iter()
+            .zip(self.imags.iter())
+            .for_each(|(re, im)| {
+                writeln!(f, "{re} + i{im}").unwrap();
+            });
+        Ok(())
     }
 }
 

@@ -1,32 +1,38 @@
 use clap::Parser;
 use spinoza::{
     config::{Config, QSArgs},
-    core::{State, CONFIG},
-    gates::{apply, Gate},
+    core::CONFIG,
     measurement::measure_qubit,
-    utils::{pretty_print_int, to_table},
+    utils::gen_random_state,
 };
 
-fn h(n: usize, show_results: bool) {
-    let now = std::time::Instant::now();
-    let mut state = State::new(n);
+fn measure_qubits(n: usize) {
+    let mut state = gen_random_state(n);
 
-    for t in 0..n {
-        apply(Gate::H, &mut state, t);
-    }
+    state
+        .reals
+        .iter()
+        .zip(state.imags.iter())
+        .for_each(|(re, im)| {
+            println!("{re},{im}");
+        });
 
-    let elapsed = now.elapsed().as_micros();
-    println!("{}", pretty_print_int(elapsed));
+    println!("----------------------------------------");
+    println!("{state}");
 
-    let now = std::time::Instant::now();
-    measure_qubit(&mut state, n - 1, true, Some(1));
-    let elapsed = now.elapsed().as_micros();
-    println!("{}", pretty_print_int(elapsed));
+    measure_qubit(&mut state, 0, true, Some(0));
+    println!("{state}");
+
+    measure_qubit(&mut state, 1, true, Some(0));
+    println!("{state}");
+
+    measure_qubit(&mut state, 2, true, Some(1));
+    println!("{state}");
 }
 
 fn main() {
     let args = QSArgs::parse();
     let config = Config::from_cli(args);
     CONFIG.set(config).unwrap();
-    h(config.qubits.into(), config.print);
+    measure_qubits(config.qubits.into());
 }

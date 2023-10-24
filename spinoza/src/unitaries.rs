@@ -123,7 +123,27 @@ impl Unitary {
                     },
                 ]
             }
-            Gate::U((theta, phi, lambda)) => todo!(),
+            Gate::U((theta, phi, lambda)) => {
+                let theta = theta / 2.0;
+                [
+                    Amplitude {
+                        re: theta.cos(),
+                        im: 0.0,
+                    },
+                    Amplitude {
+                        re: -phi.cos() * theta.sin(),
+                        im: lambda.sin() * theta.sin(),
+                    },
+                    Amplitude {
+                        re: phi.cos() * theta.sin(),
+                        im: phi.sin() * theta.sin(),
+                    },
+                    Amplitude {
+                        re: (phi + lambda).cos() * theta.cos(),
+                        im: (phi + lambda).sin() * theta.cos(),
+                    },
+                ]
+            }
         };
         let num_pairs = state.len() >> 1;
         let distance = 1 << target;
@@ -228,13 +248,136 @@ mod tests {
 
         let s = apply_unitary(&state, &u);
 
-        println!("old state:\n{state}");
-        println!("new state:\n{s}");
+        let mut s1 = State::new(n);
+        apply(Gate::H, &mut s1, 0);
+
+        assert_eq!(s.n, s1.n);
+        assert_eq!(s.reals, s1.reals);
+        assert_eq!(s.imags, s1.imags);
+    }
+
+    #[test]
+    fn test_x() {
+        let n = 2;
+        let state = State::new(n);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::X, 0);
+
+        let s = apply_unitary(&state, &u);
 
         let mut s1 = State::new(n);
-        println!("old s1:\n{s1}");
-        apply(Gate::H, &mut s1, 0);
-        println!("new s1:\n{s1}");
+        apply(Gate::X, &mut s1, 0);
+
+        assert_eq!(s.n, s1.n);
+        assert_eq!(s.reals, s1.reals);
+        assert_eq!(s.imags, s1.imags);
+    }
+
+    #[test]
+    fn test_y() {
+        let n = 2;
+        let state = State::new(n);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::Y, 0);
+
+        let s = apply_unitary(&state, &u);
+
+        let mut s1 = State::new(n);
+        apply(Gate::Y, &mut s1, 0);
+
+        assert_eq!(s.n, s1.n);
+        assert_eq!(s.reals, s1.reals);
+        assert_eq!(s.imags, s1.imags);
+    }
+
+    #[test]
+    fn test_z() {
+        let n = 2;
+        let state = State::new(n);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::Z, 0);
+
+        let s = apply_unitary(&state, &u);
+
+        let mut s1 = State::new(n);
+        apply(Gate::Z, &mut s1, 0);
+
+        assert_eq!(s.n, s1.n);
+        assert_eq!(s.reals, s1.reals);
+        assert_eq!(s.imags, s1.imags);
+    }
+
+    #[test]
+    fn test_p() {
+        let n = 2;
+        let state = State::new(n);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::P(3.0), 0);
+
+        let s = apply_unitary(&state, &u);
+
+        let mut s1 = State::new(n);
+        apply(Gate::P(3.0), &mut s1, 0);
+
+        assert_eq!(s.n, s1.n);
+        assert_eq!(s.reals, s1.reals);
+        assert_eq!(s.imags, s1.imags);
+    }
+
+    #[test]
+    fn test_rx() {
+        let n = 2;
+        let state = State::new(n);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::RX(3.0), 0);
+
+        let s = apply_unitary(&state, &u);
+
+        let mut s1 = State::new(n);
+        apply(Gate::RX(3.0), &mut s1, 0);
+
+        assert_eq!(s.n, s1.n);
+        assert_eq!(s.reals, s1.reals);
+        assert_eq!(s.imags, s1.imags);
+    }
+
+    #[test]
+    fn test_ry() {
+        let n = 2;
+        let state = State::new(n);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::RY(3.0), 0);
+
+        let s = apply_unitary(&state, &u);
+
+        let mut s1 = State::new(n);
+        apply(Gate::RY(3.0), &mut s1, 0);
+
+        assert_eq!(s.n, s1.n);
+        assert_eq!(s.reals, s1.reals);
+        assert_eq!(s.imags, s1.imags);
+    }
+
+    #[test]
+    fn test_rz() {
+        let n = 2;
+        let state = State::new(n);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::RZ(3.0), 0);
+
+        let s = apply_unitary(&state, &u);
+
+        let mut s1 = State::new(n);
+        apply(Gate::RZ(3.0), &mut s1, 0);
+
+        assert_eq!(s.n, s1.n);
+        assert_eq!(s.reals, s1.reals);
+        assert_eq!(s.imags, s1.imags);
+    }
+
+    #[test]
+    fn test_u() {
+        let n = 2;
+        let state = State::new(n);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::U((1.0, 2.0, 3.0)), 0);
+
+        let s = apply_unitary(&state, &u);
+
+        let mut s1 = State::new(n);
+        apply(Gate::U((1.0, 2.0, 3.0)), &mut s1, 0);
 
         assert_eq!(s.n, s1.n);
         assert_eq!(s.reals, s1.reals);

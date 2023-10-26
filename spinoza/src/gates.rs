@@ -115,12 +115,6 @@ fn x_proc_chunk(state_re: SendPtr<Float>, state_im: SendPtr<Float>, chunk: usize
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
-
-        unsafe {
-            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
-            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
-        }
-
         x_apply_target(state_re, state_im, s0, s1)
     }
 }
@@ -212,9 +206,6 @@ fn y_proc_chunk(state_re: SendPtr<Float>, state_im: SendPtr<Float>, chunk: usize
         let s1 = s0 + dist;
 
         unsafe {
-            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
-            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
-
             std::ptr::swap(state_re.get().add(s0), state_re.get().add(s1));
             std::ptr::swap(state_im.get().add(s0), state_im.get().add(s1));
 
@@ -302,11 +293,6 @@ fn h_apply_strat2(state: &mut State, chunk: usize, target: usize) {
         let s0 = base + i;
         let s1 = s0 + dist;
 
-        unsafe {
-            std::intrinsics::prefetch_write_data(state.reals.get_unchecked(s1 + 1), 3);
-            std::intrinsics::prefetch_write_data(state.imags.get_unchecked(s1 + 1), 3);
-        }
-
         let (a, b, c, d) = unsafe {
             let a = *state.reals.get_unchecked(s0);
             let b = *state.imags.get_unchecked(s0);
@@ -341,11 +327,6 @@ fn h_apply_strat2_par(
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
-
-        unsafe {
-            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
-            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
-        }
 
         let (a, b, c, d) = unsafe {
             let a = *state_re.get().add(s0);
@@ -449,10 +430,6 @@ fn rx_proc_chunk(
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
-        unsafe {
-            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
-            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
-        }
         rx_apply_target(state_re, state_im, s0, s1, cos, neg_sin);
     }
 }
@@ -706,11 +683,6 @@ fn ry_apply_strategy2(
         let s0 = base + i;
         let s1 = s0 + dist;
 
-        unsafe {
-            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
-            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
-        }
-
         let (a, b, c, d) = unsafe {
             // a + ib
             let a = *state_re.get().add(s0);
@@ -866,10 +838,6 @@ fn u_apply_strategy2(
     for i in 0..dist {
         let s0 = base + i;
         let s1 = s0 + dist;
-        unsafe {
-            std::intrinsics::prefetch_write_data(state_re.get().add(s1 + 1), 3);
-            std::intrinsics::prefetch_write_data(state_im.get().add(s1 + 1), 3);
-        }
         u_apply_target(state_re, state_im, g, s0, s1);
     }
 }

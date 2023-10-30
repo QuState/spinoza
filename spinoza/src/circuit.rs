@@ -3,6 +3,7 @@ use crate::{
     core::State,
     gates::{apply, c_apply, cc_apply, Gate},
     math::{pow2f, Float, PI},
+    measurement::measure_qubit,
 };
 use std::{collections::HashSet, ops::Index};
 
@@ -70,12 +71,51 @@ pub struct QuantumTransformation {
     pub controls: Controls,
 }
 
+struct QubitTracker {
+    /// Used to keep track of the qubits that were already measured We can use a u8, since the
+    /// number of qubits that one can simulate is very small. Hence, 256 bits suffices to keep
+    /// track of all qubits.
+    measured_qubits: u8,
+    /// Used to keep track of the *values* of qubits that were already measured We can use a u8,
+    /// since the number of qubits that one can simulate is very small, and the measured values are
+    /// either 0 or 1. Hence, 256 bits suffices to keep track of all measurement values.
+    measured_qubits_vals: u8,
+}
+
+impl QubitTracker {
+    pub fn new() -> Self {
+        Self {
+            measured_qubits: 0,
+            measured_qubits_vals: 0,
+        }
+    }
+
+    fn is_qubit_measured(&self, target_qubit: usize) -> bool {
+        ((self.measured_qubits >> target_qubit) & 1) == 1
+    }
+
+    fn get_qubit_measured_val(&mut self, target_qubit: usize) -> u8 {
+        (self.measured_qubits_vals & (1 << target_qubit)) >> target_qubit
+    }
+
+    /// Set the given target qubit as measured
+    fn set_measured_qubit(&mut self, target_qubit: usize) {
+        self.measured_qubits |= 1 << target_qubit;
+    }
+
+    fn set_val_for_measured_qubit(&mut self, target_qubit: usize, value: u8) {
+        self.measured_qubits_vals &= !(1 << target_qubit);
+        self.measured_qubits_vals |= value << target_qubit;
+    }
+}
+
 /// A model of a Quantum circuit
 /// See <https://en.wikipedia.org/wiki/Quantum_circuit>
 pub struct QuantumCircuit {
     transformations: Vec<QuantumTransformation>,
     /// The Quantum State to which transformations are applied
     pub state: State,
+    qubit_tracker: QubitTracker,
 }
 
 impl QuantumCircuit {
@@ -90,6 +130,7 @@ impl QuantumCircuit {
         QuantumCircuit {
             transformations: Vec::new(),
             state: State::new(bits),
+            qubit_tracker: QubitTracker::new(),
         }
     }
 
@@ -106,6 +147,16 @@ impl QuantumCircuit {
     /// Get a reference to the Quantum State
     pub fn get_statevector(&self) -> &State {
         &self.state
+    }
+
+    /// Measure a single qubit
+    #[inline]
+    pub fn measure(&mut self, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::M,
+            target,
+            controls: Controls::None,
+        });
     }
 
     /// Add the X gate for a given target to the list of QuantumTransformations
@@ -282,6 +333,14 @@ impl QuantumCircuit {
                         tr.target,
                     );
                 }
+                (Controls::None, Gate::M) => {
+                    if !self.qubit_tracker.is_qubit_measured(tr.target) {
+                        let value = measure_qubit(&mut self.state, tr.target, true, None);
+                        self.qubit_tracker.set_measured_qubit(tr.target);
+                        self.qubit_tracker
+                            .set_val_for_measured_qubit(tr.target, value);
+                    }
+                }
                 _ => {
                     todo!();
                 }
@@ -293,6 +352,10 @@ impl QuantumCircuit {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        math::modulus,
+        utils::{assert_float_closeness, gen_random_state},
+    };
 
     #[test]
     fn circuit() {
@@ -376,5 +439,66 @@ mod tests {
 
         qc.rx(PI / 2.0, q[0]);
         qc.execute();
+    }
+
+    #[test]
+    fn measure() {
+        const N: usize = 8;
+        let state = gen_random_state(N);
+
+        let sum = state
+            .reals
+            .iter()
+            .zip(state.imags.iter())
+            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .sum();
+
+        // Make sure the generated random state is sound
+        assert_float_closeness(sum, 1.0, 0.001);
+
+        let mut qc = QuantumCircuit {
+            state,
+            transformations: Vec::new(),
+            qubit_tracker: QubitTracker::new(),
+        };
+
+        // Add Measure gates for all the qubits
+        for target in 0..N {
+            qc.measure(target);
+        }
+
+        // Execute the circuit
+        qc.execute();
+
+        // Allocate stack storage of measured qubit values
+        let mut measured_vals = [0; N];
+
+        // Now collect the measured values
+        for target in 0..N {
+            let val = qc.qubit_tracker.get_qubit_measured_val(target);
+            measured_vals[target] = val;
+        }
+
+        // Now we need to measure again...
+
+        // Add Measure gates for all the qubits
+        for target in 0..N {
+            qc.measure(target);
+        }
+
+        // Execute the circuit
+        qc.execute();
+
+        // Now check that the new measured values are the same as what we got before
+        for target in 0..N {
+            assert!(
+                qc.qubit_tracker.is_qubit_measured(target),
+                "qubit {target} was already measured, but it wasn't marked as measured"
+            );
+            assert_eq!(
+                measured_vals[target],
+                qc.qubit_tracker.get_qubit_measured_val(target)
+            );
+        }
     }
 }

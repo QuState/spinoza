@@ -40,6 +40,8 @@ impl<T> Copy for SendPtr<T> {}
 pub enum Gate {
     /// Hadamard gate. See <https://en.wikipedia.org/wiki/Quantum_logic_gate#Hadamard_gate>
     H,
+    /// Measurement 'gate'
+    M,
     /// The Pauli-X gate is the quantum equivalent of the NOT gate for classical computers with
     /// respect to the standard basis |0>, |1>. See
     /// <https://en.wikipedia.org/wiki/Quantum_logic_gate#Pauli_gates_(X,Y,Z)>
@@ -72,6 +74,7 @@ pub fn apply(gate: Gate, state: &mut State, target: usize) {
         Gate::RY(theta) => ry_apply(state, target, theta),
         Gate::RZ(theta) => rz_apply(state, target, theta),
         Gate::U((theta, phi, lambda)) => u_apply(state, target, theta, phi, lambda),
+        _ => unimplemented!(),
     }
 }
 

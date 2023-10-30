@@ -7,7 +7,7 @@ use crate::{
 use rand_distr::{Binomial, Distribution};
 
 /// Single qubit measurement
-pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u64>) -> u64 {
+pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u8>) -> u8 {
     let mut prob0 = 0.0;
     let mut prob1 = 0.0;
     let num_pairs = state.len() >> 1;
@@ -26,7 +26,7 @@ pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u6
         _v
     } else {
         let bin = Binomial::new(1, prob1).unwrap();
-        bin.sample(&mut rand::thread_rng())
+        bin.sample(&mut rand::thread_rng()) as u8
     };
 
     if val == 0 {

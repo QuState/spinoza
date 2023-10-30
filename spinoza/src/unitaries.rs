@@ -144,6 +144,7 @@ impl Unitary {
                     },
                 ]
             }
+            _ => unimplemented!(),
         };
         let num_pairs = state.len() >> 1;
         let distance = 1 << target;

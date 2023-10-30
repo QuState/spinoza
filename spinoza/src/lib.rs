@@ -6,7 +6,6 @@
 #![warn(clippy::suspicious)]
 #![warn(clippy::perf)]
 #![deny(unsafe_op_in_unsafe_fn)]
-#![feature(slice_swap_unchecked)]
 
 pub mod circuit;
 pub mod config;

@@ -172,13 +172,6 @@ pub fn reservoir_sampling(state: &State, k: usize) -> Reservoir {
 //     g_proc(data, range, gate, &marks, zeros, dist);
 // }
 
-/// Swap using controlled X gates
-pub fn swap(state: &mut State, first: usize, second: usize) {
-    c_apply(Gate::X, state, first, second);
-    c_apply(Gate::X, state, second, first);
-    c_apply(Gate::X, state, first, second);
-}
-
 /// Inverse Quantum Fourier transform
 pub fn iqft(state: &mut State, targets: &[usize]) {
     for j in (0..targets.len()).rev() {

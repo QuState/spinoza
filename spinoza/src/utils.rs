@@ -1,6 +1,7 @@
 //! An assortment of utility functions for visualizing, benchmarking, and testing.
 use crate::{
     core::State,
+    gates::{c_apply, Gate},
     math::{modulus, Float, PI},
 };
 use comfy_table::{
@@ -216,6 +217,13 @@ pub fn gen_random_state(n: usize) -> State {
         imags,
         n: n.try_into().unwrap(),
     }
+}
+
+/// Swap using controlled X gates.
+pub fn swap(state: &mut State, first: usize, second: usize) {
+    c_apply(Gate::X, state, first, second);
+    c_apply(Gate::X, state, second, first);
+    c_apply(Gate::X, state, first, second);
 }
 
 #[cfg(test)]

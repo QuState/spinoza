@@ -58,6 +58,8 @@ pub enum Gate {
     RY(Float),
     /// Rz gate for rotation about the z-axis. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates>
     RZ(Float),
+    /// Swap gate swaps two qubits. See <https://en.wikipedia.org/wiki/Quantum_logic_gate#Swap_gate>
+    SWAP((usize, usize)),
     /// General single qubit rotation. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Other_named_gates>
     U((Float, Float, Float)),
 }
@@ -73,6 +75,7 @@ pub fn apply(gate: Gate, state: &mut State, target: usize) {
         Gate::RX(theta) => rx_apply(state, target, theta),
         Gate::RY(theta) => ry_apply(state, target, theta),
         Gate::RZ(theta) => rz_apply(state, target, theta),
+        Gate::SWAP((t0, t1)) => swap_apply(state, t0, t1),
         Gate::U((theta, phi, lambda)) => u_apply(state, target, theta, phi, lambda),
         _ => unimplemented!(),
     }
@@ -882,13 +885,25 @@ fn u_apply(state: &mut State, target: usize, theta: Float, phi: Float, lambda: F
     }
 }
 
+fn swap_apply(state: &mut State, t0: usize, t1: usize) {
+    assert!(usize::from(state.n) > t0 && usize::from(state.n) > t1);
+
+    for i in 0..state.len() {
+        if ((i >> t0) & 1) == 0 && ((i >> t1) & 1) == 1 {
+            let j = i + (1 << t0) - (1 << t1);
+            state.reals.swap(i, j);
+            state.imags.swap(i, j);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{
         core::iqft,
         math::{pow2f, PI},
-        utils::assert_float_closeness,
+        utils::{assert_float_closeness, gen_random_state, swap},
     };
 
     fn qcbm_functional(n: usize) -> State {
@@ -1264,5 +1279,39 @@ mod tests {
 
         assert_float_closeness(state.reals[1], -0.35316515556860967, 1e-10);
         assert_float_closeness(state.imags[1], -0.4089021333016357, 1e-10);
+    }
+
+    #[test]
+    fn swap_9_qubits() {
+        const N: usize = 9;
+        let mut state_0 = gen_random_state(N);
+        let mut state_1 = state_0.clone();
+
+        let (t0, t1) = (0, 1);
+        swap(&mut state_0, t0, t1);
+        swap_apply(&mut state_1, t0, t1);
+
+        println!("state 0:\n{state_0}");
+        println!("state 1:\n{state_1}");
+
+        assert_eq!(state_0.n, state_1.n);
+        assert_eq!(state_0.reals, state_1.reals);
+        assert_eq!(state_0.imags, state_1.imags);
+    }
+
+    #[test]
+    fn swap_all_qubits() {
+        const N: usize = 3;
+        let mut state_0 = gen_random_state(N);
+        let mut state_1 = state_0.clone();
+
+        for i in 0..(N >> 1) {
+            swap(&mut state_0, i, N - 1 - i);
+            swap_apply(&mut state_1, i, N - 1 - i);
+        }
+
+        assert_eq!(state_0.n, state_1.n);
+        assert_eq!(state_0.reals, state_1.reals);
+        assert_eq!(state_0.imags, state_1.imags);
     }
 }

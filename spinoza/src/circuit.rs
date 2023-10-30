@@ -162,6 +162,16 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add a SWAP gate that swaps two qubits
+    #[inline]
+    pub fn swap(&mut self, t0: usize, t1: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::SWAP((t0, t1)),
+            target: 0,
+            controls: Controls::None,
+        });
+    }
+
     /// Add the X gate for a given target to the list of QuantumTransformations
     #[inline]
     pub fn x(&mut self, target: usize) {
@@ -344,6 +354,9 @@ impl QuantumCircuit {
                             .set_val_for_measured_qubit(tr.target, value);
                     }
                 }
+                (Controls::None, Gate::SWAP((t0, t1))) => {
+                    apply(Gate::SWAP((t0, t1)), &mut self.state, 0)
+                }
                 _ => {
                     todo!();
                 }
@@ -357,7 +370,7 @@ mod tests {
     use super::*;
     use crate::{
         math::modulus,
-        utils::{assert_float_closeness, gen_random_state},
+        utils::{assert_float_closeness, gen_random_state, swap},
     };
 
     #[test]
@@ -503,5 +516,41 @@ mod tests {
                 qc.qubit_tracker.get_qubit_measured_val(target)
             );
         }
+    }
+
+    #[test]
+    fn swap_all_qubits() {
+        const N: usize = 9;
+        let mut qc = QuantumCircuit {
+            state: gen_random_state(N),
+            transformations: Vec::new(),
+            qubit_tracker: QubitTracker::new(),
+        };
+
+        let sum = qc
+            .state
+            .reals
+            .iter()
+            .zip(qc.state.imags.iter())
+            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .sum();
+
+        // Make sure the generated random state is sound
+        assert_float_closeness(sum, 1.0, 0.001);
+
+        let mut state = qc.state.clone();
+
+        // Add swap gates, for pairs of qubits, to the circuit. Simultaneously, directly apply swap
+        // to the lone state (using the 3 CX gate implementation)
+        for i in 0..(N >> 1) {
+            qc.swap(i, N - 1 - i);
+            swap(&mut state, i, N - 1 - i);
+        }
+
+        qc.execute();
+
+        assert_eq!(qc.state.n, state.n);
+        assert_eq!(qc.state.reals, state.reals);
+        assert_eq!(qc.state.imags, state.imags);
     }
 }

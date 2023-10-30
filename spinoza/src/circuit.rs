@@ -94,6 +94,7 @@ impl QubitTracker {
         ((self.measured_qubits >> target_qubit) & 1) == 1
     }
 
+    #[allow(dead_code)]
     fn get_qubit_measured_val(&mut self, target_qubit: usize) -> u8 {
         ((self.measured_qubits_vals & (1 << target_qubit)) >> target_qubit)
             .try_into()

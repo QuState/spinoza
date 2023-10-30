@@ -72,14 +72,14 @@ pub struct QuantumTransformation {
 }
 
 struct QubitTracker {
-    /// Used to keep track of the qubits that were already measured We can use a u8, since the
-    /// number of qubits that one can simulate is very small. Hence, 256 bits suffices to keep
+    /// Used to keep track of the qubits that were already measured We can use a u64, since the
+    /// number of qubits that one can simulate is very small. Hence, 64 bits suffices to keep
     /// track of all qubits.
-    measured_qubits: u8,
-    /// Used to keep track of the *values* of qubits that were already measured We can use a u8,
+    measured_qubits: u64,
+    /// Used to keep track of the *values* of qubits that were already measured We can use a u64,
     /// since the number of qubits that one can simulate is very small, and the measured values are
-    /// either 0 or 1. Hence, 256 bits suffices to keep track of all measurement values.
-    measured_qubits_vals: u8,
+    /// either 0 or 1. Hence, 64 bits suffices to keep track of all measurement values.
+    measured_qubits_vals: u64,
 }
 
 impl QubitTracker {
@@ -95,7 +95,9 @@ impl QubitTracker {
     }
 
     fn get_qubit_measured_val(&mut self, target_qubit: usize) -> u8 {
-        (self.measured_qubits_vals & (1 << target_qubit)) >> target_qubit
+        ((self.measured_qubits_vals & (1 << target_qubit)) >> target_qubit)
+            .try_into()
+            .unwrap()
     }
 
     /// Set the given target qubit as measured
@@ -105,7 +107,7 @@ impl QubitTracker {
 
     fn set_val_for_measured_qubit(&mut self, target_qubit: usize, value: u8) {
         self.measured_qubits_vals &= !(1 << target_qubit);
-        self.measured_qubits_vals |= value << target_qubit;
+        self.measured_qubits_vals |= (value as u64) << target_qubit;
     }
 }
 
@@ -443,7 +445,7 @@ mod tests {
 
     #[test]
     fn measure() {
-        const N: usize = 8;
+        const N: usize = 21;
         let state = gen_random_state(N);
 
         let sum = state

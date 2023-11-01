@@ -68,7 +68,7 @@ pub enum Gate {
 impl Gate {
     /// Return the inverted gate
     pub fn inverse(&self) -> Self {
-        let gate_inv = match *self {
+        match *self {
             Self::H | Self::X | Self::Y | Self::Z | Self::SWAP((_, _)) => *self,
             Self::P(theta) => Self::P(-theta),
             Self::RX(theta) => Self::RX(-theta),
@@ -76,8 +76,7 @@ impl Gate {
             Self::RZ(theta) => Self::RZ(-theta),
             Self::U((theta, phi, lambda)) => Self::U((-theta, -lambda, -phi)),
             Self::M => unimplemented!(),
-        };
-        gate_inv
+        }
     }
 
     /// Return the 2 x 2 matrix representation of the gate

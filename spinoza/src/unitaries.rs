@@ -1,10 +1,6 @@
 //! Functionality for applying large 2^n * 2^n matrices to the state
 //! Ideally, this should be a last resort
-use crate::{
-    core::State,
-    gates::Gate,
-    math::{Amplitude, Float, SQRT_ONE_HALF},
-};
+use crate::{core::State, gates::Gate, math::Float};
 
 /// A representation of a Unitary Matrix
 pub struct Unitary {
@@ -19,133 +15,7 @@ pub struct Unitary {
 impl Unitary {
     /// Construct a Unitary from a single qubit gate
     pub fn from_single_qubit_gate(state: &State, gate: Gate, target: usize) -> Self {
-        let g = match gate {
-            Gate::H => [
-                Amplitude {
-                    re: SQRT_ONE_HALF,
-                    im: 0.0,
-                },
-                Amplitude {
-                    re: SQRT_ONE_HALF,
-                    im: 0.0,
-                },
-                Amplitude {
-                    re: SQRT_ONE_HALF,
-                    im: 0.0,
-                },
-                Amplitude {
-                    re: -SQRT_ONE_HALF,
-                    im: 0.0,
-                },
-            ],
-            Gate::X => [
-                Amplitude { re: 0.0, im: 0.0 },
-                Amplitude { re: 1.0, im: 0.0 },
-                Amplitude { re: 1.0, im: 0.0 },
-                Amplitude { re: 0.0, im: 0.0 },
-            ],
-            Gate::Y => [
-                Amplitude { re: 0.0, im: 0.0 },
-                Amplitude { re: 0.0, im: -1.0 },
-                Amplitude { re: 0.0, im: 1.0 },
-                Amplitude { re: 0.0, im: 0.0 },
-            ],
-
-            Gate::Z => [
-                Amplitude { re: 1.0, im: 0.0 },
-                Amplitude { re: 0.0, im: 0.0 },
-                Amplitude { re: 0.0, im: 0.0 },
-                Amplitude { re: -1.0, im: 0.0 },
-            ],
-            Gate::P(theta) => [
-                Amplitude { re: 1.0, im: 0.0 },
-                Amplitude { re: 0.0, im: 0.0 },
-                Amplitude { re: 0.0, im: 0.0 },
-                Amplitude {
-                    re: theta.cos(),
-                    im: theta.sin(),
-                },
-            ],
-            Gate::RX(theta) => {
-                let theta = theta / 2.0;
-                [
-                    Amplitude {
-                        re: theta.cos(),
-                        im: 0.0,
-                    },
-                    Amplitude {
-                        re: 0.0,
-                        im: -theta.sin(),
-                    },
-                    Amplitude {
-                        re: 0.0,
-                        im: -theta.sin(),
-                    },
-                    Amplitude {
-                        re: theta.cos(),
-                        im: 0.0,
-                    },
-                ]
-            }
-            Gate::RY(theta) => {
-                let theta = theta / 2.0;
-                [
-                    Amplitude {
-                        re: theta.cos(),
-                        im: 0.0,
-                    },
-                    Amplitude {
-                        re: -theta.sin(),
-                        im: 0.0,
-                    },
-                    Amplitude {
-                        re: theta.sin(),
-                        im: 0.0,
-                    },
-                    Amplitude {
-                        re: theta.cos(),
-                        im: 0.0,
-                    },
-                ]
-            }
-            Gate::RZ(theta) => {
-                let theta = theta / 2.0;
-                [
-                    Amplitude {
-                        re: theta.cos(),
-                        im: -theta.sin(),
-                    },
-                    Amplitude { re: 0.0, im: 0.0 },
-                    Amplitude { re: 0.0, im: 0.0 },
-                    Amplitude {
-                        re: theta.cos(),
-                        im: theta.sin(),
-                    },
-                ]
-            }
-            Gate::U((theta, phi, lambda)) => {
-                let theta = theta / 2.0;
-                [
-                    Amplitude {
-                        re: theta.cos(),
-                        im: 0.0,
-                    },
-                    Amplitude {
-                        re: -phi.cos() * theta.sin(),
-                        im: lambda.sin() * theta.sin(),
-                    },
-                    Amplitude {
-                        re: phi.cos() * theta.sin(),
-                        im: phi.sin() * theta.sin(),
-                    },
-                    Amplitude {
-                        re: (phi + lambda).cos() * theta.cos(),
-                        im: (phi + lambda).sin() * theta.cos(),
-                    },
-                ]
-            }
-            _ => unimplemented!(),
-        };
+        let g = gate.to_matrix();
         let num_pairs = state.len() >> 1;
         let distance = 1 << target;
 
@@ -215,7 +85,10 @@ pub fn apply_unitary(state: &State, unitary: &Unitary) -> State {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::gates::{apply, Gate};
+    use crate::{
+        gates::{apply, Gate},
+        math::SQRT_ONE_HALF,
+    };
 
     #[test]
     fn test_hxi_from_single_qubit_gate() {

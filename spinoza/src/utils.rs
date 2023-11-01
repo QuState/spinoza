@@ -2,7 +2,7 @@
 use crate::{
     core::State,
     gates::{c_apply, Gate},
-    math::{modulus, Float, PI},
+    math::{modulus, Amplitude, Float, PI},
 };
 use comfy_table::{
     presets::UTF8_FULL,
@@ -224,6 +224,23 @@ pub fn swap(state: &mut State, first: usize, second: usize) {
     c_apply(Gate::X, state, first, second);
     c_apply(Gate::X, state, second, first);
     c_apply(Gate::X, state, first, second);
+}
+
+/// Utility function for multiplying two 2 x 2 gates
+pub fn mat_mul_2x2(m0: [Amplitude; 4], m1: [Amplitude; 4]) -> [Amplitude; 4] {
+    let mut res: [Amplitude; 4] = [Amplitude { re: 0.0, im: 0.0 }; 4];
+
+    for i in 0..2 {
+        for j in 0..2 {
+            for k in 0..2 {
+                res[i * 2 + j].re +=
+                    m0[i * 2 + k].re * m1[k * 2 + j].re - m0[i * 2 + k].im * m1[k * 2 + j].im;
+                res[i * 2 + j].im +=
+                    m0[i * 2 + k].re * m1[k * 2 + j].im + m0[i * 2 + k].im * m1[k * 2 + j].re;
+            }
+        }
+    }
+    res
 }
 
 #[cfg(test)]

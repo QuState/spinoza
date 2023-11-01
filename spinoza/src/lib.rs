@@ -9,6 +9,7 @@
 
 pub mod circuit;
 pub mod config;
+pub mod consts;
 pub mod core;
 pub mod gates;
 pub mod math;

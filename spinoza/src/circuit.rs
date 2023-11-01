@@ -152,6 +152,14 @@ impl QuantumCircuit {
         &self.state
     }
 
+    /// Invert this circuit
+    pub fn inverse(&mut self) {
+        self.transformations.reverse();
+        self.transformations.iter_mut().for_each(|qt| {
+            qt.gate = qt.gate.inverse();
+        });
+    }
+
     /// Measure a single qubit
     #[inline]
     pub fn measure(&mut self, target: usize) {
@@ -552,5 +560,35 @@ mod tests {
         assert_eq!(qc.state.n, state.n);
         assert_eq!(qc.state.reals, state.reals);
         assert_eq!(qc.state.imags, state.imags);
+    }
+
+    #[test]
+    fn inverse() {
+        const N: usize = 2;
+        let mut qc1 = QuantumCircuit {
+            state: State::new(N),
+            transformations: Vec::new(),
+            qubit_tracker: QubitTracker::new(),
+        };
+
+        qc1.h(0);
+        qc1.p(PI / 4.0, 1);
+        qc1.inverse();
+        qc1.execute();
+
+        let mut qc2 = QuantumCircuit {
+            state: State::new(N),
+            transformations: Vec::new(),
+            qubit_tracker: QubitTracker::new(),
+        };
+        qc2.p(-(PI / 4.0), 1);
+        qc2.h(0);
+        qc2.execute();
+
+        println!("expected:\n{}", qc2.state);
+        println!("actual:\n{}", qc1.state);
+
+        assert_eq!(qc1.state.reals, qc2.state.reals);
+        assert_eq!(qc1.state.imags, qc2.state.imags);
     }
 }

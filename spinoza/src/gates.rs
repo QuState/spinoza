@@ -1,6 +1,7 @@
 //! Abstractions for quantum logic gates
 use crate::{
     config::Config,
+    consts::{H, X, Y, Z},
     core::State,
     math::{Amplitude, Float, SQRT_ONE_HALF},
 };
@@ -62,6 +63,121 @@ pub enum Gate {
     SWAP((usize, usize)),
     /// General single qubit rotation. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Other_named_gates>
     U((Float, Float, Float)),
+}
+
+impl Gate {
+    /// Return the inverted gate
+    pub fn inverse(&self) -> Self {
+        let gate_inv = match *self {
+            Self::H | Self::X | Self::Y | Self::Z | Self::SWAP((_, _)) => *self,
+            Self::P(theta) => Self::P(-theta),
+            Self::RX(theta) => Self::RX(-theta),
+            Self::RY(theta) => Self::RY(-theta),
+            Self::RZ(theta) => Self::RZ(-theta),
+            Self::U((theta, phi, lambda)) => Self::U((-theta, -lambda, -phi)),
+            Self::M => unimplemented!(),
+        };
+        gate_inv
+    }
+
+    /// Return the 2 x 2 matrix representation of the gate
+    pub fn to_matrix(&self) -> [Amplitude; 4] {
+        let matrix = match self {
+            Self::H => H,
+            Self::X => X,
+            Self::Y => Y,
+            Self::Z => Z,
+            Self::P(theta) => [
+                Amplitude { re: 1.0, im: 0.0 },
+                Amplitude { re: 0.0, im: 0.0 },
+                Amplitude { re: 0.0, im: 0.0 },
+                Amplitude {
+                    re: theta.cos(),
+                    im: theta.sin(),
+                },
+            ],
+            Self::RX(theta) => {
+                let theta = theta / 2.0;
+                [
+                    Amplitude {
+                        re: theta.cos(),
+                        im: 0.0,
+                    },
+                    Amplitude {
+                        re: 0.0,
+                        im: -theta.sin(),
+                    },
+                    Amplitude {
+                        re: 0.0,
+                        im: -theta.sin(),
+                    },
+                    Amplitude {
+                        re: theta.cos(),
+                        im: 0.0,
+                    },
+                ]
+            }
+            Self::RY(theta) => {
+                let theta = theta / 2.0;
+                [
+                    Amplitude {
+                        re: theta.cos(),
+                        im: 0.0,
+                    },
+                    Amplitude {
+                        re: -theta.sin(),
+                        im: 0.0,
+                    },
+                    Amplitude {
+                        re: theta.sin(),
+                        im: 0.0,
+                    },
+                    Amplitude {
+                        re: theta.cos(),
+                        im: 0.0,
+                    },
+                ]
+            }
+            Self::RZ(theta) => {
+                let theta = theta / 2.0;
+                [
+                    Amplitude {
+                        re: theta.cos(),
+                        im: -theta.sin(),
+                    },
+                    Amplitude { re: 0.0, im: 0.0 },
+                    Amplitude { re: 0.0, im: 0.0 },
+                    Amplitude {
+                        re: theta.cos(),
+                        im: theta.sin(),
+                    },
+                ]
+            }
+            Self::U((theta, phi, lambda)) => {
+                let theta = theta / 2.0;
+                [
+                    Amplitude {
+                        re: theta.cos(),
+                        im: 0.0,
+                    },
+                    Amplitude {
+                        re: -lambda.cos() * theta.sin(),
+                        im: -lambda.sin() * theta.sin(),
+                    },
+                    Amplitude {
+                        re: phi.cos() * theta.sin(),
+                        im: phi.sin() * theta.sin(),
+                    },
+                    Amplitude {
+                        re: (phi + lambda).cos() * theta.cos(),
+                        im: (phi + lambda).sin() * theta.cos(),
+                    },
+                ]
+            }
+            _ => unimplemented!(),
+        };
+        matrix
+    }
 }
 
 /// Single Target, No Controls
@@ -903,7 +1019,7 @@ mod tests {
     use crate::{
         core::iqft,
         math::{pow2f, PI},
-        utils::{assert_float_closeness, gen_random_state, swap},
+        utils::{assert_float_closeness, gen_random_state, mat_mul_2x2, swap},
     };
 
     fn qcbm_functional(n: usize) -> State {
@@ -1291,9 +1407,6 @@ mod tests {
         swap(&mut state_0, t0, t1);
         swap_apply(&mut state_1, t0, t1);
 
-        println!("state 0:\n{state_0}");
-        println!("state 1:\n{state_1}");
-
         assert_eq!(state_0.n, state_1.n);
         assert_eq!(state_0.reals, state_1.reals);
         assert_eq!(state_0.imags, state_1.imags);
@@ -1313,5 +1426,163 @@ mod tests {
         assert_eq!(state_0.n, state_1.n);
         assert_eq!(state_0.reals, state_1.reals);
         assert_eq!(state_0.imags, state_1.imags);
+    }
+
+    #[test]
+    fn h_inverse() {
+        let h = Gate::H.to_matrix();
+        let h_inv = Gate::H.inverse().to_matrix();
+
+        let identity = mat_mul_2x2(h, h_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    fn x_inverse() {
+        let x = Gate::X.to_matrix();
+        let x_inv = Gate::X.inverse().to_matrix();
+
+        let identity = mat_mul_2x2(x, x_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    fn y_inverse() {
+        let y = Gate::Y.to_matrix();
+        let y_inv = Gate::Y.inverse().to_matrix();
+
+        let identity = mat_mul_2x2(y, y_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    fn z_inverse() {
+        let z = Gate::Z.to_matrix();
+        let z_inv = Gate::Z.inverse().to_matrix();
+
+        let identity = mat_mul_2x2(z, z_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    fn p_inverse() {
+        let p = Gate::P(2.03).to_matrix();
+        let p_inv = Gate::P(2.03).inverse().to_matrix();
+
+        let identity = mat_mul_2x2(p, p_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    fn rx_inverse() {
+        let rx = Gate::RX(2.03).to_matrix();
+        let rx_inv = Gate::RX(2.03).inverse().to_matrix();
+
+        let identity = mat_mul_2x2(rx, rx_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    fn rz_inverse() {
+        let rz = Gate::RZ(3.03).to_matrix();
+        let rz_inv = Gate::RZ(3.03).inverse().to_matrix();
+
+        let identity = mat_mul_2x2(rz, rz_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    fn ry_inverse() {
+        let ry = Gate::RY(3.03).to_matrix();
+        let ry_inv = Gate::RY(3.03).inverse().to_matrix();
+
+        let identity = mat_mul_2x2(ry, ry_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    fn u_inverse() {
+        let u = Gate::U((1.0, 2.0, 3.0)).to_matrix();
+        let u_inv = Gate::U((1.0, 2.0, 3.0)).inverse().to_matrix();
+
+        let identity = mat_mul_2x2(u, u_inv);
+        assert_float_closeness(identity[0].re, 1.0, 0.001);
+        assert_float_closeness(identity[0].im, 0.0, 0.001);
+        assert_float_closeness(identity[1].re, 0.0, 0.001);
+        assert_float_closeness(identity[1].im, 0.0, 0.001);
+        assert_float_closeness(identity[2].re, 0.0, 0.001);
+        assert_float_closeness(identity[2].im, 0.0, 0.001);
+        assert_float_closeness(identity[3].re, 1.0, 0.001);
+        assert_float_closeness(identity[3].im, 0.0, 0.001);
+    }
+
+    #[test]
+    #[should_panic]
+    fn m_inverse() {
+        let _m = Gate::M;
+        let _m_inv = Gate::M.inverse();
+    }
+
+    #[test]
+    #[should_panic]
+    fn swap_inverse() {
+        let _swap = Gate::SWAP((0, 1));
+        let _swap_inv = Gate::SWAP((0, 1)).inverse().to_matrix();
     }
 }

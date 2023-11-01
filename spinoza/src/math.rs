@@ -15,7 +15,7 @@ pub type Float = f64;
 pub type Float = f32;
 
 /// An amplitude that makes up a Quantum State
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Amplitude {
     /// imaginary component
     pub im: Float,

@@ -81,7 +81,7 @@ impl Gate {
 
     /// Return the 2 x 2 matrix representation of the gate
     pub fn to_matrix(&self) -> [Amplitude; 4] {
-        let matrix = match self {
+        match self {
             Self::H => H,
             Self::X => X,
             Self::Y => Y,
@@ -174,8 +174,7 @@ impl Gate {
                 ]
             }
             _ => unimplemented!(),
-        };
-        matrix
+        }
     }
 }
 

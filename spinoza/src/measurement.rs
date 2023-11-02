@@ -2,54 +2,87 @@
 use crate::{
     core::State,
     gates::{apply, Gate},
-    math::modulus,
+    math::{modulus, Float},
 };
 use rand_distr::{Binomial, Distribution};
+use rayon::prelude::*;
 
 /// Single qubit measurement
 pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u8>) -> u8 {
-    let mut prob0 = 0.0;
-    let mut prob1 = 0.0;
-    let num_pairs = state.len() >> 1;
-    let distance = 1 << target;
+    let chunk_size = 1 << (target + 1);
+    let dist = 1 << target;
 
-    for i in 0..num_pairs {
-        let s0 = i + ((i >> target) << target);
-        let s1 = s0 + distance;
+    let prob0 = state
+        .reals
+        .par_chunks_exact(chunk_size)
+        .zip_eq(state.imags.par_chunks_exact(chunk_size))
+        .map(|(reals_chunk, imags_chunk)| {
+            let (reals_s0, _reals_s1) = reals_chunk.split_at(dist);
+            let (imags_s0, _imags_s1) = imags_chunk.split_at(dist);
 
-        prob0 += modulus(state.reals[s0], state.imags[s0]).powi(2);
-        prob1 += modulus(state.reals[s1], state.imags[s1]).powi(2);
-    }
+            reals_s0
+                .par_iter()
+                .zip_eq(imags_s0.par_iter())
+                .with_min_len(1 << 16)
+                .map(|(re_s0, im_s0)| modulus(*re_s0, *im_s0).powi(2))
+                .sum::<Float>()
+        })
+        .sum::<Float>();
 
     let val = if let Some(_v) = v {
         assert!(_v == 0 || _v == 1);
         _v
     } else {
-        let bin = Binomial::new(1, prob1).unwrap();
+        let bin = Binomial::new(1, 1.0 - prob0).unwrap();
         bin.sample(&mut rand::thread_rng()) as u8
     };
 
     if val == 0 {
-        for i in 0..num_pairs {
-            let s0 = i + ((i >> target) << target);
-            let s1 = s0 + distance;
+        let prob0_sqrt_recip = prob0.sqrt().recip();
+        state
+            .reals
+            .par_chunks_exact_mut(chunk_size)
+            .zip_eq(state.imags.par_chunks_exact_mut(chunk_size))
+            .for_each(|(reals_chunk, imags_chunk)| {
+                let (reals_s0, reals_s1) = reals_chunk.split_at_mut(dist);
+                let (imags_s0, imags_s1) = imags_chunk.split_at_mut(dist);
 
-            state.reals[s0] /= prob0.sqrt();
-            state.imags[s0] /= prob0.sqrt();
-            state.reals[s1] = 0.0;
-            state.imags[s1] = 0.0;
-        }
+                reals_s0
+                    .par_iter_mut()
+                    .zip_eq(reals_s1.par_iter_mut())
+                    .zip_eq(imags_s0.par_iter_mut())
+                    .zip_eq(imags_s1.par_iter_mut())
+                    .for_each(|(((re_s0, re_s1), im_s0), im_s1)| {
+                        *re_s0 *= prob0_sqrt_recip;
+                        *im_s0 *= prob0_sqrt_recip;
+                        *re_s1 = 0.0;
+                        *im_s1 = 0.0;
+                    });
+            });
     } else {
-        for i in 0..num_pairs {
-            let s0 = i + ((i >> target) << target);
-            let s1 = s0 + distance;
+        let prob1 = 1.0 - prob0;
+        let prob1_sqrt_recip = prob1.sqrt().recip();
 
-            state.reals[s0] = 0.0;
-            state.imags[s0] = 0.0;
-            state.reals[s1] /= prob1.sqrt();
-            state.imags[s1] /= prob1.sqrt();
-        }
+        state
+            .reals
+            .par_chunks_exact_mut(chunk_size)
+            .zip_eq(state.imags.par_chunks_exact_mut(chunk_size))
+            .for_each(|(reals_chunk, imags_chunk)| {
+                let (reals_s0, reals_s1) = reals_chunk.split_at_mut(dist);
+                let (imags_s0, imags_s1) = imags_chunk.split_at_mut(dist);
 
+                reals_s0
+                    .par_iter_mut()
+                    .zip_eq(reals_s1.par_iter_mut())
+                    .zip_eq(imags_s0.par_iter_mut())
+                    .zip_eq(imags_s1.par_iter_mut())
+                    .for_each(|(((re_s0, re_s1), im_s0), im_s1)| {
+                        *re_s1 *= prob1_sqrt_recip;
+                        *im_s1 *= prob1_sqrt_recip;
+                        *re_s0 = 0.0;
+                        *im_s0 = 0.0;
+                    });
+            });
         if reset {
             apply(Gate::X, state, target);
         }

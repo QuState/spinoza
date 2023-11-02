@@ -5,7 +5,8 @@ use spinoza::{
     core::{iqft, State},
     gates::{apply, c_apply, Gate},
     math::{pow2f, Float, PI},
-    utils::pretty_print_int,
+    measurement::measure_qubit,
+    utils::{gen_random_state, pretty_print_int},
 };
 
 fn first_rotation(circuit: &mut QuantumCircuit, nqubits: usize, angles: &mut Vec<Float>) {
@@ -138,6 +139,11 @@ fn pprint_int(i: u128) {
     let _res = pretty_print_int(i);
 }
 
+fn measure(n: usize) {
+    let mut state = gen_random_state(n);
+    measure_qubit(&mut state, 0, true, None);
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     let n = 25;
 
@@ -174,6 +180,8 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("pprint_int", |b| {
         b.iter(|| pprint_int(black_box(u128::MAX)))
     });
+
+    c.bench_function("measure", |b| b.iter(|| measure(black_box(n))));
 }
 
 criterion_group! {name = benches; config = Criterion::default().sample_size(100); targets = criterion_benchmark}

@@ -208,9 +208,9 @@ pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
 }
 
 /// Two Controls, Single Target
-pub fn cc_apply(gate: Gate, state: &mut State, contros0: usize, contros1: usize, target: usize) {
+pub fn cc_apply(gate: Gate, state: &mut State, control0: usize, control1: usize, target: usize) {
     match gate {
-        Gate::X => x_cc_apply(state, contros0, contros1, target),
+        Gate::X => x_cc_apply(state, control0, control1, target),
         _ => todo!(),
     }
 }

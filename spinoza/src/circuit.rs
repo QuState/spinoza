@@ -137,6 +137,15 @@ impl QuantumCircuit {
         }
     }
 
+    /// Utiltiy for building circuit from a given State
+    pub fn new_from_state(state: State) -> Self {
+        Self {
+            state,
+            transformations: Vec::new(),
+            qubit_tracker: QubitTracker::new(),
+        }
+    }
+
     /// Create a new QuantumCircuit from a single QuantumRegister
     pub fn new(r: &mut QuantumRegister) -> Self {
         QuantumCircuit::new_multi(&mut [r])
@@ -185,6 +194,16 @@ impl QuantumCircuit {
     pub fn x(&mut self, target: usize) {
         self.add(QuantumTransformation {
             gate: Gate::X,
+            target,
+            controls: Controls::None,
+        });
+    }
+
+    /// Add the Y gate for a given target to the list of QuantumTransformations
+    #[inline]
+    pub fn y(&mut self, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::Y,
             target,
             controls: Controls::None,
         });
@@ -289,6 +308,16 @@ impl QuantumCircuit {
     pub fn rz(&mut self, angle: Float, target: usize) {
         self.add(QuantumTransformation {
             gate: Gate::RZ(angle),
+            target,
+            controls: Controls::None,
+        });
+    }
+
+    /// Add the U gate for a given target to the list of QuantumTransformations
+    #[inline]
+    pub fn u(&mut self, theta: Float, phi: Float, lambda: Float, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::U((theta, phi, lambda)),
             target,
             controls: Controls::None,
         });
@@ -563,6 +592,39 @@ mod tests {
     }
 
     #[test]
+    fn inverse_iqft() {
+        const N: usize = 2;
+        let original_state = gen_random_state(N);
+        let mut qc1 = QuantumCircuit {
+            state: original_state.clone(),
+            transformations: Vec::new(),
+            qubit_tracker: QubitTracker::new(),
+        };
+
+        // First we apply iqft to all qubits
+        let targets: Vec<_> = (0..N).map(|q| q).rev().collect();
+        qc1.iqft(&targets);
+        qc1.execute();
+
+        // Next, we apply inverse of iqft to all qubits
+        qc1.iqft(&targets);
+        qc1.inverse();
+        qc1.execute();
+
+        // Check that after applying iqft and iqft inverse, we get the original state back
+        original_state
+            .reals
+            .iter()
+            .zip(original_state.imags.iter())
+            .zip(qc1.state.reals.iter())
+            .zip(qc1.state.imags.iter())
+            .for_each(|(((os_re, os_im), qc1_re), qc1_im)| {
+                assert_float_closeness(*qc1_re, *os_re, 0.001);
+                assert_float_closeness(*qc1_im, *os_im, 0.001);
+            });
+    }
+
+    #[test]
     fn inverse() {
         const N: usize = 2;
         let mut qc1 = QuantumCircuit {
@@ -584,9 +646,6 @@ mod tests {
         qc2.p(-(PI / 4.0), 1);
         qc2.h(0);
         qc2.execute();
-
-        println!("expected:\n{}", qc2.state);
-        println!("actual:\n{}", qc1.state);
 
         assert_eq!(qc1.state.reals, qc2.state.reals);
         assert_eq!(qc1.state.imags, qc2.state.imags);

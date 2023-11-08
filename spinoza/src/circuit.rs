@@ -94,11 +94,14 @@ impl QubitTracker {
         ((self.measured_qubits >> target_qubit) & 1) == 1
     }
 
-    #[allow(dead_code)]
-    fn get_qubit_measured_val(&mut self, target_qubit: usize) -> u8 {
-        ((self.measured_qubits_vals & (1 << target_qubit)) >> target_qubit)
-            .try_into()
-            .unwrap()
+    fn get_qubit_measured_val(&mut self, target_qubit: usize) -> Option<u8> {
+        if self.is_qubit_measured(target_qubit) {
+            ((self.measured_qubits_vals & (1 << target_qubit)) >> target_qubit)
+                .try_into()
+                .ok()
+        } else {
+            None
+        }
     }
 
     /// Set the given target qubit as measured
@@ -119,41 +122,29 @@ pub struct QuantumCircuit {
     /// The Quantum State to which transformations are applied
     pub state: State,
     qubit_tracker: QubitTracker,
+    /// The sizes of the provided quantum registers
+    #[allow(dead_code)]
+    quantum_registers_info: Vec<usize>,
 }
 
 impl QuantumCircuit {
     /// Create a new QuantumCircuit from multiple QuantumRegisters
-    pub fn new_multi(registers: &mut [&mut QuantumRegister]) -> Self {
+    pub fn new(registers: &mut [&mut QuantumRegister]) -> Self {
         let mut bits = 0;
 
-        for r in registers {
+        let mut qr_sizes = Vec::with_capacity(registers.len());
+
+        for r in registers.iter_mut() {
             r.update_shift(bits);
+            qr_sizes.push(r.len());
             bits += r.len();
         }
         QuantumCircuit {
             transformations: Vec::new(),
             state: State::new(bits),
             qubit_tracker: QubitTracker::new(),
+            quantum_registers_info: qr_sizes,
         }
-    }
-
-    /// Utiltiy for building circuit from a given State
-    pub fn new_from_state(state: State) -> Self {
-        Self {
-            state,
-            transformations: Vec::new(),
-            qubit_tracker: QubitTracker::new(),
-        }
-    }
-
-    /// Create a new QuantumCircuit from a single QuantumRegister
-    pub fn new(r: &mut QuantumRegister) -> Self {
-        QuantumCircuit::new_multi(&mut [r])
-    }
-
-    /// Create a new QuantumCircuit from two QuantumRegisters
-    pub fn new2(r0: &mut QuantumRegister, r1: &mut QuantumRegister) -> Self {
-        QuantumCircuit::new_multi(&mut [r0, r1])
     }
 
     /// Get a reference to the Quantum State
@@ -344,32 +335,26 @@ impl QuantumCircuit {
     pub fn execute(&mut self) {
         for tr in self.transformations.drain(..) {
             match (&tr.controls, tr.gate) {
-                (Controls::None, Gate::RZ(theta)) => {
-                    apply(Gate::RZ(theta), &mut self.state, tr.target);
+                (Controls::None, Gate::M) => {
+                    if !self.qubit_tracker.is_qubit_measured(tr.target) {
+                        let value = measure_qubit(&mut self.state, tr.target, true, None);
+                        self.qubit_tracker.set_measured_qubit(tr.target);
+                        self.qubit_tracker
+                            .set_val_for_measured_qubit(tr.target, value);
+                    }
                 }
-                (Controls::None, Gate::RX(theta)) => {
-                    apply(Gate::RX(theta), &mut self.state, tr.target);
-                }
-                (Controls::None, Gate::X) => {
-                    apply(Gate::X, &mut self.state, tr.target);
-                }
-                (Controls::None, Gate::RY(theta)) => {
-                    apply(Gate::RY(theta), &mut self.state, tr.target);
-                }
-                (Controls::None, Gate::Z) => {
-                    apply(Gate::Z, &mut self.state, tr.target);
-                }
-                (Controls::None, Gate::H) => {
-                    apply(Gate::H, &mut self.state, tr.target);
-                }
-                (Controls::None, Gate::P(theta)) => {
-                    apply(Gate::P(theta), &mut self.state, tr.target);
+                (Controls::None, gate) => {
+                    apply(gate, &mut self.state, tr.target);
                 }
                 (Controls::Single(control), Gate::X) => {
                     c_apply(Gate::X, &mut self.state, *control, tr.target);
                 }
                 (Controls::Single(control), Gate::P(theta)) => {
-                    c_apply(Gate::P(theta), &mut self.state, *control, tr.target);
+                    if let Some(val) = self.qubit_tracker.get_qubit_measured_val(tr.target) {
+                        if val == 1 {
+                            c_apply(Gate::P(theta), &mut self.state, *control, tr.target);
+                        }
+                    }
                 }
                 (Controls::Single(control), Gate::RY(theta)) => {
                     c_apply(Gate::RY(theta), &mut self.state, *control, tr.target);
@@ -382,17 +367,6 @@ impl QuantumCircuit {
                         controls[1],
                         tr.target,
                     );
-                }
-                (Controls::None, Gate::M) => {
-                    if !self.qubit_tracker.is_qubit_measured(tr.target) {
-                        let value = measure_qubit(&mut self.state, tr.target, true, None);
-                        self.qubit_tracker.set_measured_qubit(tr.target);
-                        self.qubit_tracker
-                            .set_val_for_measured_qubit(tr.target, value);
-                    }
-                }
-                (Controls::None, Gate::SWAP((t0, t1))) => {
-                    apply(Gate::SWAP((t0, t1)), &mut self.state, 0)
                 }
                 _ => {
                     todo!();
@@ -411,37 +385,19 @@ mod tests {
     };
 
     #[test]
-    fn circuit() {
-        let n = 2;
-        let mut q = QuantumRegister::new(n);
-        let mut a = QuantumRegister::new(1);
-        let mut qc = QuantumCircuit::new2(&mut q, &mut a);
-
-        for i in 0..n {
-            qc.ry(PI / 2.0, q[i]);
-        }
-        qc.cry(PI / 2.0, q[0], q[1]);
-        qc.p(PI / 2.0, q[0]);
-        qc.cp(PI / 2.0, q[0], q[1]);
-        qc.h(a[0]);
-
-        qc.execute();
-    }
-
-    #[test]
     fn value_encoding() {
         let v = 2.4;
         let n = 3;
 
         let mut q = QuantumRegister::new(n);
-        let mut qc = QuantumCircuit::new(&mut q);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
 
         for i in 0..n {
-            qc.h(q[i])
+            qc.h(i)
         }
 
         for i in 0..n {
-            qc.p((2 as Float) * PI / pow2f(i + 1) * v, q[i])
+            qc.p((2 as Float) * PI / pow2f(i + 1) * v, i)
         }
 
         let targets: Vec<usize> = (0..n).rev().collect();
@@ -453,13 +409,13 @@ mod tests {
     fn z_gate() {
         let n = 2;
         let mut q = QuantumRegister::new(n);
-        let mut qc = QuantumCircuit::new(&mut q);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
 
         for i in 0..n {
-            qc.h(q[i])
+            qc.h(i)
         }
 
-        qc.z(q[0]);
+        qc.z(0);
 
         qc.execute();
     }
@@ -468,13 +424,13 @@ mod tests {
     fn ccx() {
         let n = 3;
         let mut q = QuantumRegister::new(n);
-        let mut qc = QuantumCircuit::new(&mut q);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
 
         for i in 0..n - 1 {
-            qc.h(q[i])
+            qc.h(i)
         }
 
-        qc.ccx(q[0], q[1], q[2]);
+        qc.ccx(0, 1, 2);
 
         qc.execute();
         let _state = qc.get_statevector();
@@ -484,13 +440,13 @@ mod tests {
     fn x_gate() {
         let n = 2;
         let mut q = QuantumRegister::new(n);
-        let mut qc = QuantumCircuit::new(&mut q);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
 
         for i in 0..n {
-            qc.h(q[i])
+            qc.h(i)
         }
 
-        qc.rx(PI / 2.0, q[0]);
+        qc.rx(PI / 2.0, 0);
         qc.execute();
     }
 
@@ -513,6 +469,7 @@ mod tests {
             state,
             transformations: Vec::new(),
             qubit_tracker: QubitTracker::new(),
+            quantum_registers_info: Vec::new(),
         };
 
         // Add Measure gates for all the qubits
@@ -528,7 +485,10 @@ mod tests {
 
         // Now collect the measured values
         for target in 0..N {
-            let val = qc.qubit_tracker.get_qubit_measured_val(target);
+            let val = qc
+                .qubit_tracker
+                .get_qubit_measured_val(target)
+                .expect("qubit: {target} should be measured");
             measured_vals[target] = val;
         }
 
@@ -550,7 +510,9 @@ mod tests {
             );
             assert_eq!(
                 measured_vals[target],
-                qc.qubit_tracker.get_qubit_measured_val(target)
+                qc.qubit_tracker
+                    .get_qubit_measured_val(target)
+                    .expect("qubit: {target} should be measured")
             );
         }
     }
@@ -562,6 +524,7 @@ mod tests {
             state: gen_random_state(N),
             transformations: Vec::new(),
             qubit_tracker: QubitTracker::new(),
+            quantum_registers_info: Vec::new(),
         };
 
         let sum = qc
@@ -599,6 +562,7 @@ mod tests {
             state: original_state.clone(),
             transformations: Vec::new(),
             qubit_tracker: QubitTracker::new(),
+            quantum_registers_info: Vec::new(),
         };
 
         // First we apply iqft to all qubits
@@ -631,6 +595,7 @@ mod tests {
             state: State::new(N),
             transformations: Vec::new(),
             qubit_tracker: QubitTracker::new(),
+            quantum_registers_info: Vec::new(),
         };
 
         qc1.h(0);
@@ -642,6 +607,7 @@ mod tests {
             state: State::new(N),
             transformations: Vec::new(),
             qubit_tracker: QubitTracker::new(),
+            quantum_registers_info: Vec::new(),
         };
         qc2.p(-(PI / 4.0), 1);
         qc2.h(0);

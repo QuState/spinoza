@@ -14,5 +14,6 @@ pub mod core;
 pub mod gates;
 pub mod math;
 pub mod measurement;
+pub mod openqasm;
 pub mod unitaries;
 pub mod utils;

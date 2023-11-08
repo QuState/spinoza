@@ -103,9 +103,9 @@ impl QuantumCircuit {
             .collect();
 
         let mut regs_ref: Vec<&mut QuantumRegisterRS> = regs.iter_mut().collect();
-        let regs_ref_slice: &mut [&mut QuantumRegisterRS] = &mut regs_ref;
+        let mut regs_ref_slice: &mut [&mut QuantumRegisterRS] = &mut regs_ref;
         Self {
-            qc: QuantumCircuitRS::new_multi(regs_ref_slice),
+            qc: QuantumCircuitRS::new(&mut regs_ref_slice),
         }
     }
 

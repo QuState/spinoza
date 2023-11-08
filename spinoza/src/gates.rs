@@ -294,12 +294,12 @@ fn x_c_apply(state: &mut State, control: usize, target: usize) {
     }
 }
 
-fn x_cc_apply(state: &mut State, contros0: usize, contros1: usize, target: usize) {
+fn x_cc_apply(state: &mut State, control0: usize, control1: usize, target: usize) {
     let mut i = 0;
     let dist = 1 << target;
 
     while i < state.len() {
-        let c0c1_set = (((i >> contros0) & 1) != 0) && (((i >> contros1) & 1) != 0);
+        let c0c1_set = (((i >> control0) & 1) != 0) && (((i >> control1) & 1) != 0);
         if c0c1_set {
             let s0 = i;
             let s1 = i + dist;

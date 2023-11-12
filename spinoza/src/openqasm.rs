@@ -88,7 +88,7 @@ fn build_circuit(ast: &[AstNode]) -> QuantumCircuit {
                 "rx" => {
                     for arg in args0.iter() {
                         if let Argument::Qubit(identifier, qubit_num) = arg {
-                            let angle = args1[0].replace(" ", "").parse::<Float>().unwrap();
+                            let angle = args1[0].replace(' ', "").parse::<Float>().unwrap();
                             let register = registers.get(identifier).unwrap();
                             qc.rx(angle, register[(*qubit_num).try_into().unwrap()]);
                         }
@@ -97,7 +97,7 @@ fn build_circuit(ast: &[AstNode]) -> QuantumCircuit {
                 "ry" => {
                     for arg in args0.iter() {
                         if let Argument::Qubit(identifier, qubit_num) = arg {
-                            let angle = args1[0].replace(" ", "").parse::<Float>().unwrap();
+                            let angle = args1[0].replace(' ', "").parse::<Float>().unwrap();
                             let register = registers.get(identifier).unwrap();
                             qc.ry(angle, register[(*qubit_num).try_into().unwrap()]);
                         }
@@ -106,7 +106,7 @@ fn build_circuit(ast: &[AstNode]) -> QuantumCircuit {
                 "rz" => {
                     for arg in args0.iter() {
                         if let Argument::Qubit(identifier, qubit_num) = arg {
-                            let angle = args1[0].replace(" ", "").parse::<Float>().unwrap();
+                            let angle = args1[0].replace(' ', "").parse::<Float>().unwrap();
                             let register = registers.get(identifier).unwrap();
                             qc.rz(angle, register[(*qubit_num).try_into().unwrap()]);
                         }
@@ -115,9 +115,9 @@ fn build_circuit(ast: &[AstNode]) -> QuantumCircuit {
                 "u" => {
                     for arg in args0.iter() {
                         if let Argument::Qubit(identifier, qubit_num) = arg {
-                            let theta = args1[0].replace(" ", "").parse::<Float>().unwrap();
-                            let phi = args1[1].replace(" ", "").parse::<Float>().unwrap();
-                            let lambda = args1[2].replace(" ", "").parse::<Float>().unwrap();
+                            let theta = args1[0].replace(' ', "").parse::<Float>().unwrap();
+                            let phi = args1[1].replace(' ', "").parse::<Float>().unwrap();
+                            let lambda = args1[2].replace(' ', "").parse::<Float>().unwrap();
                             let register = registers.get(identifier).unwrap();
                             qc.u(
                                 theta,

@@ -174,7 +174,19 @@ mod tests {
     use crate::{circuit::QuantumRegister, utils::assert_float_closeness};
 
     #[test]
-    fn quantum_lstm() {}
+    fn quantum_lstm_load() {
+        let filename: &Path = Path::new("../qasm/quantum_lstm.qasm");
+        let mut qc1 = load(filename);
+        qc1.execute();
+
+        qc1.state
+            .reals
+            .iter()
+            .zip(qc1.state.imags.iter())
+            .for_each(|(qc1_re, qc1_im)| {
+                println!("{} + i{}", *qc1_re, *qc1_im);
+            });
+    }
 
     #[test]
     fn iqft_load() {
@@ -193,8 +205,8 @@ mod tests {
             .reals
             .iter()
             .zip(qc1.state.imags.iter())
-            .zip(qc1.state.reals.iter())
-            .zip(qc1.state.imags.iter())
+            .zip(qc2.state.reals.iter())
+            .zip(qc2.state.imags.iter())
             .for_each(|(((qc1_re, qc1_im), qc2_re), qc2_im)| {
                 assert_float_closeness(*qc1_re, *qc2_re, 0.001);
                 assert_float_closeness(*qc1_im, *qc2_im, 0.001);
@@ -218,8 +230,8 @@ mod tests {
             .reals
             .iter()
             .zip(qc1.state.imags.iter())
-            .zip(qc1.state.reals.iter())
-            .zip(qc1.state.imags.iter())
+            .zip(qc2.state.reals.iter())
+            .zip(qc2.state.imags.iter())
             .for_each(|(((qc1_re, qc1_im), qc2_re), qc2_im)| {
                 assert_float_closeness(*qc1_re, *qc2_re, 0.001);
                 assert_float_closeness(*qc1_im, *qc2_im, 0.001);
@@ -249,8 +261,8 @@ mod tests {
             .reals
             .iter()
             .zip(qc1.state.imags.iter())
-            .zip(qc1.state.reals.iter())
-            .zip(qc1.state.imags.iter())
+            .zip(qc2.state.reals.iter())
+            .zip(qc2.state.imags.iter())
             .for_each(|(((qc1_re, qc1_im), qc2_re), qc2_im)| {
                 assert_float_closeness(*qc1_re, *qc2_re, 0.001);
                 assert_float_closeness(*qc1_im, *qc2_im, 0.001);
@@ -280,8 +292,8 @@ mod tests {
             .reals
             .iter()
             .zip(qc1.state.imags.iter())
-            .zip(qc1.state.reals.iter())
-            .zip(qc1.state.imags.iter())
+            .zip(qc2.state.reals.iter())
+            .zip(qc2.state.imags.iter())
             .for_each(|(((qc1_re, qc1_im), qc2_re), qc2_im)| {
                 assert_float_closeness(*qc1_re, *qc2_re, 0.001);
                 assert_float_closeness(*qc1_im, *qc2_im, 0.001);

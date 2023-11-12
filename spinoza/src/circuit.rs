@@ -346,18 +346,14 @@ impl QuantumCircuit {
                 (Controls::None, gate) => {
                     apply(gate, &mut self.state, tr.target);
                 }
-                (Controls::Single(control), Gate::X) => {
-                    c_apply(Gate::X, &mut self.state, *control, tr.target);
-                }
-                (Controls::Single(control), Gate::P(theta)) => {
-                    if let Some(val) = self.qubit_tracker.get_qubit_measured_val(tr.target) {
-                        if val == 1 {
-                            c_apply(Gate::P(theta), &mut self.state, *control, tr.target);
+                (Controls::Single(control), gate) => {
+                    if let Some(c_bit) = self.qubit_tracker.get_qubit_measured_val(*control) {
+                        if c_bit == 1 {
+                            apply(gate, &mut self.state, tr.target);
                         }
+                    } else {
+                        c_apply(gate, &mut self.state, *control, tr.target);
                     }
-                }
-                (Controls::Single(control), Gate::RY(theta)) => {
-                    c_apply(Gate::RY(theta), &mut self.state, *control, tr.target);
                 }
                 (Controls::Ones(controls), Gate::X) => {
                     cc_apply(

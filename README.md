@@ -28,7 +28,7 @@ rustup toolchain install nightly
 rustup default nightly
 ```
 
-### Building on *nix [for macOS]](INSTALL.md)
+### Building on *nix [for macOS](INSTALL.md)
 
 #### Develoment
 ```bash

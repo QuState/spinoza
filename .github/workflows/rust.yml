@@ -20,7 +20,6 @@ jobs:
 
       - name: Run cargo clippy
         uses: actions-rs/cargo@v1
-          # continue-on-error: true  # WARNING: only for this example, remove it!
         with:
           command: clippy
           args: -- -D warnings
@@ -42,7 +41,6 @@ jobs:
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
-          # continue-on-error: true  # WARNING: only for this example, remove it!
         with:
           command: fmt
           args: --all -- --check
@@ -63,6 +61,26 @@ jobs:
 
       - name: Run cargo test
         uses: actions-rs/cargo@v1
-          # continue-on-error: true  # WARNING: only for this example, remove it!
         with:
           command: test
+
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - name: Install nightly toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate code coverage
+        run: cargo llvm-cov --workspace --lcov --output-path lcov.info
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: lcov.info
+          fail_ci_if_error: true

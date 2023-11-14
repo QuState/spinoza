@@ -1,5 +1,17 @@
-[![Build](https://github.com/QuState/spinoza/actions/workflows/rust.yml/badge.svg)](https://github.com/QuState/spinoza/actions/workflows/rust.yml)
-[![Spinoza documentation](https://img.shields.io/badge/docs-passing-brightgreen)](https://qustate.github.io/spinoza/)
+<p align="center">
+  <!-- Tests -->
+  <a href="https://github.com/QuState/spinoza/actions/workflows/rust.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/PennyLaneAI/PennyLane/tests.yml?branch=master&style=flat-square" />
+  </a>
+  <!-- CodeCov -->
+  <a href="https://app.codecov.io/gh/QuState/spinoza">
+    <img src="https://img.shields.io/codecov/c/github/QuState/spinoza?style=flat-square&logo=codecov" />
+  </a>
+  <!-- Docs -->
+  <a href="https://qustate.github.io/spinoza">
+    <img src="https://img.shields.io/badge/docs-passing-brightgreen" />
+  </a>
+</p>
 
 <p align="center">
 <img src="assets/logo.png" width="400">

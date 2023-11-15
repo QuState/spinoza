@@ -5,27 +5,42 @@ from spinoza_py import QuantumRegister, QuantumCircuit, run, show_table, get_sam
 plt.style.use("ggplot")
 
 
-
 def padded_bin(n, k):
     return bin(k)[2:].zfill(n)
 
 
 def state_to_probs_dict(state):
     n = int(np.log2(len(state)))
-    return dict(zip([str(k) + '=' + padded_bin(n, k) for k in range(len(state))],
-                    [abs(complex(state[k][0], state[k][1])) ** 2 for k in range(len(state))]))
+    return dict(
+        zip(
+            [str(k) + "=" + padded_bin(n, k) for k in range(len(state))],
+            [abs(complex(state[k][0], state[k][1])) ** 2 for k in range(len(state))],
+        )
+    )
 
 
 def plot_probs_v_counts(counts, state_probs_dict, shots, title=""):
-
     bitstrings = sorted(counts.keys())
     X_axis = np.arange(len(bitstrings))
     plt.figure(figsize=(10, 5))
 
-    plt.bar(X_axis-0.2, [abs(v) for v in state_probs_dict.values()], 0.4, align='center', color='grey', label='Expectation')
+    plt.bar(
+        X_axis - 0.2,
+        [abs(v) for v in state_probs_dict.values()],
+        0.4,
+        align="center",
+        color="grey",
+        label="Expectation",
+    )
 
     count_probabilities = [counts[bitstring] / shots for bitstring in bitstrings]
-    plt.bar(X_axis+0.2, count_probabilities, 0.4, color='blue', label = 'Sample Frequency from ' + str(shots) + ' shots')
+    plt.bar(
+        X_axis + 0.2,
+        count_probabilities,
+        0.4,
+        color="blue",
+        label="Sample Frequency from " + str(shots) + " shots",
+    )
 
     plt.xticks(X_axis, bitstrings, rotation=90)
     # plt.xticks(rotation=90)
@@ -50,6 +65,7 @@ def val_encoding(n, v):
 
     return qc
 
+
 def normal_sin4(n, qc):
     theta = np.arccos(np.sqrt(2 / 3))  # 0.47
     # qc = QuantumCircuit(q)
@@ -64,7 +80,6 @@ def normal_sin4(n, qc):
 
 
 def test_ccx(n, v):
-
     q0 = QuantumRegister(n)
     qc = QuantumCircuit(q0)
 

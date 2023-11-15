@@ -119,61 +119,30 @@ def cx_gate(n):
     qc.execute()
 
 
-def time_benchmark(
-    n, num_runs, test_name
-):
-
-    run_times = [0] * num_runs
-
-    for i in range(num_runs):
-        if test_name == "value_encoding":
-            now = time.time()
-            val_encoding(n, 7.0)
-            end = time.time()
-        if test_name == "qcbm":
-            now = time.time()
-            qcbm(n)
-            end = time.time()
-        if test_name == "x_gate":
-            now = time.time()
-            x_gate(n)
-            end = time.time()
-        if test_name == "rx_gate":
-            now = time.time()
-            rx_gate(n)
-            end = time.time()
-        if test_name == "rz_gate":
-            now = time.time()
-            rz_gate(n)
-            end = time.time()
-        if test_name == "cnot_gate":
-            now = time.time()
-            cx_gate(n)
-            end = time.time()
-        if test_name == "phase_gate":
-            now = time.time()
-            phase_gate(n)
-            end = time.time()
-        if test_name == "h_gate":
-            now = time.time()
-            h_gate(n)
-            end = time.time()
-        if test_name == "ry_gate":
-            now = time.time()
-            ry_gate(n)
-            end = time.time()
-
-        elapsed = (end - now) * 10**6
-        run_times[i] = elapsed
-
-    print(np.mean(run_times))
+def run(n: int, name: str):
+    if test_name == "value_encoding":
+        val_encoding(n, 7.0)
+    if test_name == "qcbm":
+        qcbm(n)
+    if test_name == "x_gate":
+        x_gate(n)
+    if test_name == "rx_gate":
+        rx_gate(n)
+    if test_name == "rz_gate":
+        rz_gate(n)
+    if test_name == "cnot_gate":
+        cx_gate(n)
+    if test_name == "phase_gate":
+        phase_gate(n)
+    if test_name == "h_gate":
+        h_gate(n)
+    if test_name == "ry_gate":
+        ry_gate(n)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--qubits", type=int, required=True)
-    parser.add_argument("--num_runs", type=int, required=True)
-    parser.add_argument("--test_name", type=str, required=True)
+    parser.add_argument("--name", type=str, required=True)
     args = parser.parse_args()
-
-    time_benchmark(args.qubits, args.num_runs, args.test_name)
+    run(args.qubits, args.name)

@@ -11,7 +11,7 @@ source .env/bin/activate
 
 2. Install dependencies
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 ```
 
 3. Build wheels
@@ -25,14 +25,12 @@ target/wheels (the path to the file will also be in the command's output).
 ```bash
 pip install <path-to-wheel>
 ```
-
 For example:
 ```bash
 pip install ../target/wheels/spinoza_py-*.whl
 ```
 
-
-### Examples
+### Try it out!
 
 ```python
 import numpy as np

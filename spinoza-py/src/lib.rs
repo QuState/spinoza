@@ -117,8 +117,8 @@ impl QuantumCircuit {
     }
 
     #[inline]
-    pub fn x(&mut self, target: usize) {
-        self.qc.x(target)
+    pub fn inverse(&mut self) {
+        self.qc.inverse()
     }
 
     #[inline]
@@ -127,24 +127,23 @@ impl QuantumCircuit {
     }
 
     #[inline]
+    pub fn x(&mut self, target: usize) {
+        self.qc.x(target)
+    }
+
+    #[inline]
+    pub fn y(&mut self, target: usize) {
+        self.qc.y(target)
+    }
+
+    #[inline]
     pub fn z(&mut self, target: usize) {
         self.qc.z(target)
     }
 
     #[inline]
-    pub fn y(&mut self, _target: usize) {
-        todo!()
-        // self.qc.y(target)
-    }
-
-    #[inline]
     pub fn p(&mut self, angle: Float, target: usize) {
         self.qc.p(angle, target)
-    }
-
-    #[inline]
-    pub fn rz(&mut self, angle: Float, target: usize) {
-        self.qc.rz(angle, target)
     }
 
     #[inline]
@@ -155,6 +154,22 @@ impl QuantumCircuit {
     #[inline]
     pub fn ry(&mut self, angle: Float, target: usize) {
         self.qc.ry(angle, target)
+    }
+
+    #[inline]
+    pub fn rz(&mut self, angle: Float, target: usize) {
+        self.qc.rz(angle, target)
+    }
+
+    // Special gates
+    #[inline]
+    pub fn measure(&mut self, target: usize) {
+        self.qc.measure(target)
+    }
+
+    #[inline]
+    pub fn swap(&mut self, t0: usize, t1: usize) {
+        self.qc.swap(t0, t1)
     }
 
     // Controlled gates
@@ -169,9 +184,8 @@ impl QuantumCircuit {
     }
 
     #[inline]
-    pub fn cy(&mut self, _control: usize, _target: usize) {
-        todo!()
-        // self.qc.cy(control, target)
+    pub fn cy(&mut self, control: usize, target: usize) {
+        self.qc.cy(control, target)
     }
 
     #[inline]
@@ -180,9 +194,8 @@ impl QuantumCircuit {
     }
 
     #[inline]
-    pub fn crx(&mut self, _angle: Float, _control: usize, _target: usize) {
-        todo!()
-        // self.qc.crx(angle, control, target)
+    pub fn crx(&mut self, angle: Float, control: usize, target: usize) {
+        self.qc.crx(angle, control, target)
     }
 
     #[inline]

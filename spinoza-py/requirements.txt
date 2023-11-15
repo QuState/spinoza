@@ -1,9 +1,1 @@
-pytest
-pip
 maturin
-numpy
-qulacs
-scipy
-pylint
-black
-matplotlib

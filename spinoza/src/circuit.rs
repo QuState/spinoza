@@ -218,7 +218,7 @@ impl QuantumCircuit {
             gate: Gate::X,
             target,
             controls: Controls::Single(control),
-        });
+       });
     }
 
     /// Add the CCX gate for a given target qubit and two control qubits to the list of
@@ -279,6 +279,28 @@ impl QuantumCircuit {
     pub fn cp(&mut self, angle: Float, control: usize, target: usize) {
         self.add(QuantumTransformation {
             gate: Gate::P(angle),
+            target,
+            controls: Controls::Single(control),
+        });
+    }
+
+    /// Add the Controlled Y gate for a given target qubit and a given control qubit to the list of
+    /// QuantumTransformations
+    #[inline]
+    pub fn cy(&mut self, control: usize, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::Y,
+            target,
+            controls: Controls::Single(control),
+        });
+    }
+
+    /// Add the Controlled Rx gate for a given target qubit and a given control qubit to the list of
+    /// QuantumTransformations
+    #[inline]
+    pub fn crx(&mut self, angle: Float, control: usize, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::RX(angle),
             target,
             controls: Controls::Single(control),
         });
@@ -412,6 +434,44 @@ mod tests {
         }
 
         qc.z(0);
+
+        qc.execute();
+    }
+
+    #[test]
+    fn crx() {
+        let n = 3;
+        let mut q = QuantumRegister::new(n);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
+
+        for i in 0..n {
+            qc.h(i)
+        }
+
+        let mut t = 0;
+        while t < n - 1 {
+            qc.crx(3.043, t, t+1);
+            t += 2;
+        }
+
+        qc.execute();
+    }
+
+    #[test]
+    fn cy() {
+        let n = 3;
+        let mut q = QuantumRegister::new(n);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
+
+        for i in 0..n {
+            qc.h(i)
+        }
+
+        let mut t = 0;
+        while t < n - 1 {
+            qc.cy(t, t+1);
+            t += 2;
+        }
 
         qc.execute();
     }

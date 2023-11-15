@@ -1,9 +1,4 @@
 //! An assortment of utility functions for visualizing, benchmarking, and testing.
-use crate::{
-    core::State,
-    gates::{c_apply, Gate},
-    math::{modulus, Amplitude, Float, PI},
-};
 use comfy_table::{
     presets::UTF8_FULL,
     Color::Rgb,
@@ -11,6 +6,12 @@ use comfy_table::{
 };
 use rand::distributions::Uniform;
 use rand::prelude::*;
+
+use crate::{
+    core::State,
+    gates::{c_apply, Gate},
+    math::{modulus, Amplitude, Float, PI},
+};
 
 /// Formats an unsigned, 128 bit integer with commas, as a string. Used for readability
 pub fn pretty_print_int(i: u128) -> String {

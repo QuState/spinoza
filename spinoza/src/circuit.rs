@@ -1,11 +1,12 @@
 //! Abstractions for a quantum circuit
+use std::{collections::HashSet, ops::Index};
+
 use crate::{
     core::State,
     gates::{apply, c_apply, cc_apply, Gate},
     math::{pow2f, Float, PI},
     measurement::measure_qubit,
 };
-use std::{collections::HashSet, ops::Index};
 
 /// See <https://en.wikipedia.org/wiki/Quantum_register>
 #[derive(Clone)]
@@ -218,7 +219,7 @@ impl QuantumCircuit {
             gate: Gate::X,
             target,
             controls: Controls::Single(control),
-       });
+        });
     }
 
     /// Add the CCX gate for a given target qubit and two control qubits to the list of
@@ -396,11 +397,12 @@ impl QuantumCircuit {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         math::modulus,
         utils::{assert_float_closeness, gen_random_state, swap},
     };
+
+    use super::*;
 
     #[test]
     fn value_encoding() {
@@ -450,7 +452,7 @@ mod tests {
 
         let mut t = 0;
         while t < n - 1 {
-            qc.crx(3.043, t, t+1);
+            qc.crx(3.043, t, t + 1);
             t += 2;
         }
 
@@ -469,7 +471,7 @@ mod tests {
 
         let mut t = 0;
         while t < n - 1 {
-            qc.cy(t, t+1);
+            qc.cy(t, t + 1);
             t += 2;
         }
 

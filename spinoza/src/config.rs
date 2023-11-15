@@ -1,7 +1,8 @@
 //! Configuration options for runnning spinoza
-use crate::core::CONFIG;
 use clap::Parser;
 use num_cpus;
+
+use crate::core::CONFIG;
 
 /// Config for simulations that are run using the CLI
 #[derive(Debug, Clone, Copy)]

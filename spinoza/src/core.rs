@@ -1,12 +1,14 @@
 //! Abstractions for representing a Quantum State
+use std::{collections::HashMap, fmt};
+
+use once_cell::sync::OnceCell;
+use rand::prelude::*;
+
 use crate::{
     config::Config,
     gates::{apply, c_apply, Gate},
     math::{modulus, pow2f, Float, PI},
 };
-use once_cell::sync::OnceCell;
-use rand::prelude::*;
-use std::{collections::HashMap, fmt};
 
 /// Reference to the Config for user passed config args
 pub static CONFIG: OnceCell<Config> = OnceCell::new();

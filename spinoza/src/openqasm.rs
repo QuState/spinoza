@@ -1,11 +1,13 @@
 //! Functionality for creating a QuantumCircuit from an OpenQASM 2.0 program
+use std::{collections::HashMap, env, fs::File, io::prelude::*, path::Path};
+
+use evalexpr::*;
+use qasm::{lex, parse, process, Argument, AstNode};
+
 use crate::{
     circuit::{QuantumCircuit, QuantumRegister},
     math::{Float, PI},
 };
-use evalexpr::*;
-use qasm::{lex, parse, process, Argument, AstNode};
-use std::{collections::HashMap, env, fs::File, io::prelude::*, path::Path};
 
 /// Parse an OpenQASM 2.0 program file, and convert it into a `QuantumCircuit`.
 pub fn load(filename: &Path) -> QuantumCircuit {
@@ -170,8 +172,9 @@ fn build_circuit(ast: &[AstNode]) -> QuantumCircuit {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{circuit::QuantumRegister, utils::assert_float_closeness};
+
+    use super::*;
 
     #[test]
     fn quantum_lstm_load() {

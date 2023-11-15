@@ -1,11 +1,12 @@
 //! Abstractions for quantum logic gates
+use rayon::prelude::*;
+
 use crate::{
     config::Config,
     consts::{H, X, Y, Z},
     core::State,
     math::{Amplitude, Float, SQRT_ONE_HALF},
 };
-use rayon::prelude::*;
 
 const LOW_QUBIT_THRESHOLD: u8 = 15;
 
@@ -1013,12 +1014,13 @@ fn swap_apply(state: &mut State, t0: usize, t1: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         core::iqft,
         math::{pow2f, PI},
         utils::{assert_float_closeness, gen_random_state, mat_mul_2x2, swap},
     };
+
+    use super::*;
 
     fn qcbm_functional(n: usize) -> State {
         let mut state = State::new(n);

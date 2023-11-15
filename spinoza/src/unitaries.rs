@@ -84,11 +84,12 @@ pub fn apply_unitary(state: &State, unitary: &Unitary) -> State {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::{
         gates::{apply, Gate},
         math::SQRT_ONE_HALF,
     };
+
+    use super::*;
 
     #[test]
     fn test_hxi_from_single_qubit_gate() {

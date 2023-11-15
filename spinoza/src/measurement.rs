@@ -1,11 +1,12 @@
 //! Functionality for measurement
+use rand_distr::{Binomial, Distribution};
+use rayon::prelude::*;
+
 use crate::{
     core::State,
     gates::{apply, Gate},
     math::{modulus, Float},
 };
-use rand_distr::{Binomial, Distribution};
-use rayon::prelude::*;
 
 /// Single qubit measurement
 pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u8>) -> u8 {
@@ -92,8 +93,9 @@ pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u8
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::utils::{assert_float_closeness, gen_random_state};
+
+    use super::*;
 
     #[test]
     fn test_measure_qubit() {

@@ -31,48 +31,31 @@ information, please see the accompanying
 ## Getting Started
 
 ### Prerequisites
+- [Rust](https://www.rust-lang.org/learn/get-started)
 
-[Rust](https://www.rust-lang.org/learn/get-started)
-
-[nightly Rust](https://rust-lang.github.io/rustup/concepts/channels.html)
+- [nightly Rust](https://rust-lang.github.io/rustup/concepts/channels.html)
 ```bash
 rustup toolchain install nightly
 rustup default nightly
 ```
-
-### Building on *nix [for macOS](INSTALL.md)
-
-#### Develoment
-```bash
-cargo build
-```
+### Building on *nix
+> [!NOTE] 
+> before building on macOS, please see the [install guide](INSTALL.md).
 
 #### Production
 ```bash
 cargo build --release
 ```
-
-### Testing
-```bash
-cargo test
-```
-
 ### Try it out!
-
-In general, examples can be run using:
+[examples](https://github.com/QuState/spinoza/tree/main/spinoza/examples) can be run using:
 ```bash
-cargo run --release --example <example-name> -- -q <num-qubits>
+cargo run --release --example <example-name> -- -q <num-qubits> -t <num-threads>
 ```
 
-For example:
-```bash
-cargo run --release --example rx -- --threads $(nproc) --qubits 20
-cargo run --release --example ry -- --threads $(nproc) --qubits 20
-cargo run --release --example rz -- --threads $(nproc) --qubits 20
-cargo run --release --example x -- --threads $(nproc) --qubits 20
-cargo run --release --example z -- --threads $(nproc) --qubits 20
-cargo run --release --example p -- --threads $(nproc) --qubits 20
-```
+## Contributing
+
+Everyone is welcomed to contribute to Spinoza! Please see the [contributing guideline](CONTRIBUTING.md) for
+more information. If you encounter any issues, please feel free to open a [new issue](https://github.com/QuState/spinoza/issues/new).
 
 ___
 

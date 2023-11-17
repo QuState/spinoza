@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from spinoza_py import QuantumRegister, QuantumCircuit, run, show_table, get_samples
+from spynoza import QuantumRegister, QuantumCircuit, run, show_table, get_samples
 
 plt.style.use("ggplot")
 
@@ -68,9 +68,6 @@ def val_encoding(n, v):
 
 def normal_sin4(n, qc):
     theta = np.arccos(np.sqrt(2 / 3))  # 0.47
-    # qc = QuantumCircuit(q)
-    # n = q.len()
-    # print(n)
     qc.ry(2 * theta, n - 1)
     qc.p(np.pi, n - 1)
     qc.cry(np.pi / 2, n - 1, 0)
@@ -131,16 +128,7 @@ def build_dagger(n, operator_a, operator_b):
     return qc
 
 
-# inner product
-# circuit = build_dagger(3, normal_sin4, linear_1_plus_2k_inv)
-# state = run(circuit)
-# print(state)
-
-circuit = val_encoding(3, 2.4)
-state = run(circuit)
-print(len(state))
-
-# sample
-# samples = get_samples(state, 1000)
-#
-# plot_probs_v_counts(samples, state_to_probs_dict(state), 1000)
+if __name__ == "__main__":
+    circuit = val_encoding(3, 2.4)
+    state = run(circuit)
+    print(len(state))

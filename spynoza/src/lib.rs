@@ -1,6 +1,11 @@
+extern crate spinoza as spinoza_rs;
+
+use std::collections::HashMap;
+
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-use spinoza::{
+
+use spinoza_rs::{
     circuit::{
         QuantumCircuit as QuantumCircuitRS, QuantumRegister as QuantumRegisterRS,
         QuantumTransformation as QuantumTransformationRS,
@@ -9,7 +14,6 @@ use spinoza::{
     math::{Amplitude, Float},
     utils::to_table,
 };
-use std::collections::HashMap;
 
 #[pyclass]
 struct PyAmplitude {
@@ -240,7 +244,7 @@ pub fn run(qc: &mut QuantumCircuit) -> PyResult<PyState> {
 }
 
 #[pymodule]
-fn spinoza_py(_py: Python, m: &PyModule) -> PyResult<()> {
+fn spynoza(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(get_samples))?;
     m.add_wrapped(wrap_pyfunction!(show_table))?;
     m.add_wrapped(wrap_pyfunction!(run))?;

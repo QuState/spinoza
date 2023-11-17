@@ -1,23 +1,6 @@
 import argparse
-import time
-
 import numpy as np
-from spinoza_py import QuantumRegister, QuantumCircuit, show_table
-
-
-def val_encoding(n, v):
-    q = QuantumRegister(n)
-    qc = QuantumCircuit(q)
-
-    for i in range(n):
-        qc.h(i)
-
-    for i in range(n):
-        qc.p(2 * np.pi / (2 ** (i + 1)) * v, i)
-
-    qc.iqft(range(n)[::-1])
-
-    qc.execute()
+from spynoza import QuantumRegister, QuantumCircuit, show_table
 
 
 def qcbm(n):
@@ -120,23 +103,21 @@ def cx_gate(n):
 
 
 def run(n: int, name: str):
-    if test_name == "value_encoding":
-        val_encoding(n, 7.0)
-    if test_name == "qcbm":
+    if name == "qcbm":
         qcbm(n)
-    if test_name == "x_gate":
+    if name == "x_gate":
         x_gate(n)
-    if test_name == "rx_gate":
+    if name == "rx_gate":
         rx_gate(n)
-    if test_name == "rz_gate":
+    if name == "rz_gate":
         rz_gate(n)
-    if test_name == "cnot_gate":
+    if name == "cnot_gate":
         cx_gate(n)
-    if test_name == "phase_gate":
+    if name == "phase_gate":
         phase_gate(n)
-    if test_name == "h_gate":
+    if name == "h_gate":
         h_gate(n)
-    if test_name == "ry_gate":
+    if name == "ry_gate":
         ry_gate(n)
 
 

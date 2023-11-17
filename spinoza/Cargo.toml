@@ -3,6 +3,14 @@ name = "spinoza"
 version = "0.2.0"
 edition = "2021"
 
+authors = ["Saveliy Yusufov", "Charlee Stefanski", "Constantin Gonciulea"]
+license = "Apache-2.0"
+description = "A High Performance Quantum State Simulator"
+documentation = "https://qustate.github.io/spinoza/"
+repository = "A High Performance Quantum State Simulator implemented in Rust "
+keywords = ["quantum-computing", "simulation", "simulator", "quantum"]
+categories = ["science", "simulation"]
+
 [features]
 default = ["double"]
 single = []

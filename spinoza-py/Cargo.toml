@@ -9,7 +9,7 @@ name = "spinoza_py"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.18.3", features = ["extension-module", "abi3-py37"] }
+pyo3 = { version = "0.20.0", features = ["extension-module", "abi3-py37"] }
 # use for m1
 #pyo3 = { version = "0.16.5", features = ["extension-module"] }
 # use for cross compiling to windows

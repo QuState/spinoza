@@ -2,6 +2,7 @@
 
 ## 0.3.0
 
+- Update dependencies to latest available releases
 - Update python bindings (spinoza-py) to reflect latest changes/features
 - Add code coverage to CI pipeline and add codecov badge to README
 - Add instructions for building on macOS

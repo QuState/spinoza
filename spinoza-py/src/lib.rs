@@ -161,15 +161,9 @@ impl QuantumCircuit {
         self.qc.rz(angle, target)
     }
 
-    // Special gates
     #[inline]
-    pub fn measure(&mut self, target: usize) {
-        self.qc.measure(target)
-    }
-
-    #[inline]
-    pub fn swap(&mut self, t0: usize, t1: usize) {
-        self.qc.swap(t0, t1)
+    pub fn u(&mut self, theta: Float, phi: Float, lambda: Float, target: usize) {
+        self.qc.u(theta, phi, lambda, target)
     }
 
     // Controlled gates
@@ -201,6 +195,17 @@ impl QuantumCircuit {
     #[inline]
     pub fn cry(&mut self, angle: Float, control: usize, target: usize) {
         self.qc.cry(angle, control, target)
+    }
+
+    // Special gates
+    #[inline]
+    pub fn measure(&mut self, target: usize) {
+        self.qc.measure(target)
+    }
+
+    #[inline]
+    pub fn swap(&mut self, t0: usize, t1: usize) {
+        self.qc.swap(t0, t1)
     }
 
     #[inline]

@@ -55,7 +55,7 @@ impl PyState {
 }
 
 #[pyfunction]
-pub fn show_table(s: &PyState) {
+pub fn show_table(s: &PyState) -> String {
     to_table(&s.data)
 }
 

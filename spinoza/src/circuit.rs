@@ -509,6 +509,60 @@ mod tests {
     }
 
     #[test]
+    fn all_gates_as_transformations() {
+        const N: usize = 17;
+        let mut q = QuantumRegister::new(N);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
+
+        for t in 0..N {
+            qc.h(t)
+        }
+
+        qc.x(0);
+        qc.y(1);
+        qc.z(2);
+        qc.p(PI, 3);
+        qc.cp(PI, 3, 4);
+        qc.rx(PI, 5);
+        qc.ry(PI, 6);
+        qc.rz(PI, 7);
+        qc.u(PI, PI, PI, 8);
+        qc.cy(9, 10);
+        qc.crx(PI, 11, 12);
+        qc.cry(PI, 13, 14);
+        qc.execute();
+
+        let mut state = State::new(N);
+        for t in 0..N {
+            apply(Gate::H, &mut state, t);
+        }
+
+        apply(Gate::X, &mut state, 0);
+        apply(Gate::Y, &mut state, 1);
+        apply(Gate::Z, &mut state, 2);
+        apply(Gate::P(PI), &mut state, 3);
+        c_apply(Gate::P(PI), &mut state, 3, 4);
+        apply(Gate::RX(PI), &mut state, 5);
+        apply(Gate::RY(PI), &mut state, 6);
+        apply(Gate::RZ(PI), &mut state, 7);
+        apply(Gate::U((PI, PI, PI)), &mut state, 8);
+        c_apply(Gate::Y, &mut state, 9, 10);
+        c_apply(Gate::RX(PI), &mut state, 11, 12);
+        c_apply(Gate::RY(PI), &mut state, 13, 14);
+
+        state
+            .reals
+            .iter()
+            .zip(state.imags.iter())
+            .zip(qc.state.reals.iter())
+            .zip(qc.state.imags.iter())
+            .for_each(|(((s_re, s_im), qc_re), qc_im)| {
+                assert_float_closeness(*qc_re, *s_re, 0.001);
+                assert_float_closeness(*qc_im, *s_im, 0.001);
+            });
+    }
+
+    #[test]
     fn measure() {
         const N: usize = 21;
         let state = gen_random_state(N);
@@ -624,7 +678,7 @@ mod tests {
         };
 
         // First we apply iqft to all qubits
-        let targets: Vec<_> = (0..N).map(|q| q).rev().collect();
+        let targets: Vec<_> = (0..N).rev().collect();
         qc1.iqft(&targets);
         qc1.execute();
 

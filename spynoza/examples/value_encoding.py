@@ -20,4 +20,4 @@ def value_encoding(n, v):
 
 if __name__ == "__main__":
     state = value_encoding(4, 2.4)
-    show_table(state)
+    print(show_table(state))

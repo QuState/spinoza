@@ -198,7 +198,7 @@ mod tests {
         qc2.execute();
 
         let n: usize = qc2.state.n.into();
-        let targets: Vec<_> = (0..n).map(|n| n).rev().collect();
+        let targets: Vec<_> = (0..n).rev().collect();
         let mut qr = QuantumRegister::new(n);
         let mut qc1 = QuantumCircuit::new(&mut [&mut qr]);
         qc1.iqft(&targets);
@@ -223,7 +223,7 @@ mod tests {
         qc2.execute();
 
         let n: usize = qc2.state.n.into();
-        let targets: Vec<_> = (0..n).map(|n| n).rev().collect();
+        let targets: Vec<_> = (0..n).rev().collect();
         let mut qr = QuantumRegister::new(n);
         let mut qc1 = QuantumCircuit::new(&mut [&mut qr]);
         qc1.iqft(&targets);

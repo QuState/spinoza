@@ -5,7 +5,7 @@ use num_cpus;
 use crate::core::CONFIG;
 
 /// Config for simulations that are run using the CLI
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Config {
     /// The number of threads to distribute the worload amongst.
     /// `u32` is used to represent number of threads since 4,294,967,295 is a
@@ -39,14 +39,15 @@ impl Config {
     fn test() -> Config {
         Config {
             threads: num_cpus::get().try_into().unwrap(),
-            qubits: 25,
+            // no input for tests, so this quantity should not matter
+            qubits: 0,
             print: false,
         }
     }
 }
 
 /// Representation of the CLI args
-#[derive(Parser, Debug)]
+#[derive(Parser)]
 pub struct QSArgs {
     #[clap(short, long)]
     threads: u32,
@@ -54,4 +55,17 @@ pub struct QSArgs {
     print: bool,
     #[clap(short, long)]
     qubits: u8,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn no_args() {
+        let config = Config::global();
+        assert_eq!(config.threads, num_cpus::get().try_into().unwrap());
+        assert_eq!(config.qubits, 0);
+        assert!(!config.print);
+    }
 }

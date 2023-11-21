@@ -147,7 +147,7 @@ mod tests {
         let mut reals = Vec::with_capacity(1 << n);
         let mut imags = Vec::with_capacity(1 << n);
 
-        let vals = vec![
+        let vals = [
             0.034172256444052966,
             0.29007027387615136,
             -0.1300556493088507,

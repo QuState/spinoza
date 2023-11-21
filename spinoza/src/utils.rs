@@ -47,7 +47,7 @@ pub fn padded_bin(i: usize, width: usize) -> String {
 }
 
 /// Display the `State` as a table
-pub fn to_table(state: &State) {
+pub fn to_table(state: &State) -> String {
     let n: usize = state.n.into();
     let mut table = Table::new();
     table
@@ -84,7 +84,7 @@ pub fn to_table(state: &State) {
         ]);
     });
     table.force_no_tty().enforce_styling().style_text_only();
-    println!("{}", table);
+    table.to_string()
 }
 
 fn complex_to_rgb(z_re: Float, z_im: Float, scaled_saturation: bool) -> Color {
@@ -159,26 +159,6 @@ fn hsv_to_rgb(hue: f32, sat: f32, val: f32) -> [u8; 3] {
     ]
 }
 
-/// Create an iterator of `Range`'s, such that the total size is
-/// `total_count`, and the ranges are of approximately equal size. Deprecated.
-pub fn balanced_ranges(
-    total_count: usize,
-    bucket_count: usize,
-) -> impl Iterator<Item = std::ops::Range<usize>> {
-    let b = bucket_count.min(total_count);
-    let (q, r) = (total_count / b, total_count % b);
-    let mut start: usize = 0;
-
-    (0..b).map(move |i| {
-        let range = std::ops::Range {
-            start,
-            end: start + q + if i < r { 1 } else { 0 },
-        };
-        start = range.end;
-        range
-    })
-}
-
 /// Asserts that two floating point numbers are approximately equal.
 pub fn assert_float_closeness(actual: Float, expected: Float, epsilon: Float) {
     assert!((actual - expected).abs() < epsilon);
@@ -187,7 +167,7 @@ pub fn assert_float_closeness(actual: Float, expected: Float, epsilon: Float) {
 /// Generates a random quantum state
 pub fn gen_random_state(n: usize) -> State {
     assert!(n > 0);
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
     let between = Uniform::from(0.0..1.0);
     let angle_dist = Uniform::from(0.0..2.0 * PI);
     let num_amps = 1 << n;
@@ -247,6 +227,134 @@ pub fn mat_mul_2x2(m0: [Amplitude; 4], m1: [Amplitude; 4]) -> [Amplitude; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
+
+    // color values taken from: https://www.rapidtables.com/convert/color/hsv-to-rgb.html
+    #[test]
+    fn hsv_rgb_conv() {
+        let hsv_colors = HashMap::from([
+            ("Black", (0.0, 0.0, 0.0)),
+            ("White", (0.0, 0.0, 100.0)),
+            ("Red", (0.0, 100.0, 100.0)),
+            ("Lime", (120.0, 100.0, 100.0)),
+            ("Blue", (240.0, 100.0, 100.0)),
+            ("Yellow", (60.0, 100.0, 100.0)),
+            ("Cyan", (180.0, 100.0, 100.0)),
+            ("Magenta", (300.0, 100.0, 100.0)),
+            ("Silver", (0.0, 0.0, 75.0)),
+            ("Gray", (0.0, 0.0, 50.0)),
+            ("Maroon", (0.0, 100.0, 50.0)),
+            ("Olive", (60.0, 100.0, 50.0)),
+            ("Green", (120.0, 100.0, 50.0)),
+            ("Purple", (300.0, 100.0, 50.0)),
+            ("Teal", (180.0, 100.0, 50.0)),
+            ("Navy", (240.0, 100.0, 50.0)),
+        ]);
+        let rgb_colors = HashMap::from([
+            ("Black", (0, 0, 0)),
+            ("White", (255, 255, 255)),
+            ("Red", (255, 0, 0)),
+            ("Lime", (0, 255, 0)),
+            ("Blue", (0, 0, 255)),
+            ("Yellow", (255, 255, 0)),
+            ("Cyan", (0, 255, 255)),
+            ("Magenta", (255, 0, 255)),
+            ("Silver", (191, 191, 191)),
+            ("Gray", (128, 128, 128)),
+            ("Maroon", (128, 0, 0)),
+            ("Olive", (128, 128, 0)),
+            ("Green", (0, 128, 0)),
+            ("Purple", (128, 0, 128)),
+            ("Teal", (0, 128, 128)),
+            ("Navy", (0, 0, 128)),
+        ]);
+
+        for (color, value) in hsv_colors.into_iter() {
+            let expected_rgb_color = *rgb_colors.get(color).unwrap();
+            let actual_rgb_color = hsv_to_rgb(value.0, value.1, value.2);
+            assert_eq!(actual_rgb_color[0], expected_rgb_color.0);
+            assert_eq!(actual_rgb_color[1], expected_rgb_color.1);
+            assert_eq!(actual_rgb_color[2], expected_rgb_color.2);
+        }
+    }
+
+    // Compare the output to a complex number color map
+    // Positive real numbers always appear red.
+    // The primary colors appear at phase angles 2 pi/3 (green) and 4 pi/3 (blue).
+    // The subtractive colors yellow, cyan, and magenta have the phases pi/3, pi, and 5 pi/3.
+    //https://vqm.uni-graz.at/pages/colormap.html
+    #[test]
+    fn complex_num_color_map() {
+        let rgb_colors = HashMap::from([
+            ("Red", Rgb { r: 255, g: 0, b: 0 }),
+            ("Blue", Rgb { r: 0, g: 0, b: 255 }),
+            (
+                "Yellow",
+                Rgb {
+                    r: 255,
+                    g: 255,
+                    b: 0,
+                },
+            ),
+            (
+                "Cyan",
+                Rgb {
+                    r: 0,
+                    g: 255,
+                    b: 255,
+                },
+            ),
+            (
+                "Magenta",
+                Rgb {
+                    r: 255,
+                    g: 0,
+                    b: 255,
+                },
+            ),
+            ("Green", Rgb { r: 0, g: 255, b: 0 }),
+        ]);
+
+        let z = Amplitude { re: 1.0, im: 0.0 };
+        let rgb_val = complex_to_rgb(z.re, z.im, false);
+        assert_eq!(rgb_val, *rgb_colors.get("Red").unwrap());
+
+        let z = Amplitude {
+            re: (2.0 * PI / 3.0).cos(),
+            im: (2.0 * PI / 3.0).sin(),
+        };
+        let rgb_val = complex_to_rgb(z.re, z.im, false);
+        assert_eq!(rgb_val, *rgb_colors.get("Green").unwrap());
+
+        let z = Amplitude {
+            re: (4.0 * PI / 3.0).cos(),
+            im: (4.0 * PI / 3.0).sin(),
+        };
+        let rgb_val = complex_to_rgb(z.re, z.im, false);
+        assert_eq!(rgb_val, *rgb_colors.get("Blue").unwrap());
+
+        let z = Amplitude {
+            re: (PI / 3.0).cos(),
+            im: (PI / 3.0).sin(),
+        };
+        let rgb_val = complex_to_rgb(z.re, z.im, false);
+        println!("{:?}", rgb_val);
+        assert_eq!(rgb_val, *rgb_colors.get("Yellow").unwrap());
+
+        let z = Amplitude {
+            re: PI.cos(),
+            im: PI.sin(),
+        };
+        let rgb_val = complex_to_rgb(z.re, z.im, false);
+        assert_eq!(rgb_val, *rgb_colors.get("Cyan").unwrap());
+
+        let z = Amplitude {
+            re: (5.0 * PI / 3.0).cos(),
+            im: (5.0 * PI / 3.0).sin(),
+        };
+        let rgb_val = complex_to_rgb(z.re, z.im, false);
+        assert_eq!(rgb_val, *rgb_colors.get("Magenta").unwrap());
+    }
 
     #[test]
     fn test_pretty_print_int() {

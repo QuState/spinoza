@@ -15,7 +15,7 @@ pub type Float = f64;
 pub type Float = f32;
 
 /// An amplitude that makes up a Quantum State
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct Amplitude {
     /// imaginary component
     pub im: Float,
@@ -31,6 +31,49 @@ pub fn modulus(z_re: Float, z_im: Float) -> Float {
 }
 
 /// Compute 2^n and convert it to a float
-pub const fn pow2f(n: usize) -> Float {
-    (1 << n) as Float
+pub fn pow2f(n: usize) -> Float {
+    const BASE2: Float = 2.0;
+    BASE2.powi(n.try_into().unwrap())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::assert_float_closeness;
+
+    fn linspace(start: Float, end: Float, num: Option<usize>) -> Vec<Float> {
+        let n = if let Some(num) = num { num } else { 50 };
+        let step = (end - start) / n as Float;
+        let mut x = 0.0;
+        let mut res: Vec<Float> = Vec::with_capacity(n);
+
+        while x < end {
+            res.push(x);
+            x += step;
+        }
+        res
+    }
+
+    #[test]
+    fn modulus_unit_circle() {
+        let angles = linspace(0.0, PI, Some(100));
+        for angle in angles.into_iter() {
+            let amplitude = Amplitude {
+                re: angle.cos(),
+                im: angle.sin(),
+            };
+            assert_float_closeness(modulus(amplitude.re, amplitude.im), 1.0, 0.001);
+        }
+    }
+
+    #[test]
+    fn pow() {
+        for i in 0..52 {
+            let mut res = 1.0;
+            for _ in 0..i {
+                res *= 2.0;
+            }
+            assert_float_closeness(pow2f(i), res, 0.001);
+        }
+    }
 }

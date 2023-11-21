@@ -28,7 +28,7 @@ fn benchmark_circuit_value_encoding(n: usize, show_results: bool) {
     println!("{}", pretty_print_int(elapsed));
 
     if show_results {
-        to_table(qc.get_statevector())
+        println!("{}", to_table(qc.get_statevector()));
     }
 }
 

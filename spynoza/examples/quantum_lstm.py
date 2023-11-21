@@ -41,4 +41,4 @@ def quantum_lstm():
 
 if __name__ == "__main__":
     state = quantum_lstm()
-    show_table(state)
+    print(show_table(state))

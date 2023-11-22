@@ -2,7 +2,9 @@
 use std::{collections::HashMap, fmt};
 
 use once_cell::sync::OnceCell;
+use rand::distributions::Uniform;
 use rand::prelude::*;
+use rayon::prelude::*;
 
 use crate::{
     config::Config,
@@ -76,16 +78,19 @@ impl Reservoir {
         }
     }
 
-    fn update(&mut self, e_i: usize, w_i: Float, rng: &mut ThreadRng) {
+    fn update(&mut self, e_i: usize, w_i: Float) {
         self.w_s += w_i;
         let delta = w_i / self.w_s;
 
-        self.entries.iter_mut().for_each(|e| {
-            let epsilon_k: Float = rng.gen();
-            if epsilon_k < delta {
-                *e = e_i;
-            }
-        });
+        self.entries
+            .par_iter_mut()
+            .with_min_len(1 << 16)
+            .for_each_init(thread_rng, |rng, e| {
+                let epsilon_k: Float = rng.gen();
+                if epsilon_k < delta {
+                    *e = e_i;
+                }
+            });
     }
 
     fn weight(reals: &[Float], imags: &[Float], index: usize) -> Float {
@@ -94,13 +99,15 @@ impl Reservoir {
     }
 
     /// Run the sampling based on the given State
-    pub fn sampling(&mut self, reals: &[Float], imags: &[Float], m: usize) {
+    pub fn sampling(&mut self, reals: &[Float], imags: &[Float], num_tests: usize) {
+        debug_assert_eq!(reals.len(), imags.len());
+        let uniform_dist = Uniform::from(0..reals.len());
         let mut rng = thread_rng();
-        let mut outcomes = (0..reals.len()).cycle();
 
-        for _ in 0..m {
-            let outcome = outcomes.next().unwrap(); // aka the index
-            self.update(outcome, Self::weight(reals, imags, outcome), &mut rng);
+        self.w_s = 0.0;
+        for _ in 0..num_tests {
+            let outcome = uniform_dist.sample(&mut rng); // aka the index
+            self.update(outcome, Self::weight(reals, imags, outcome));
         }
     }
 
@@ -115,10 +122,9 @@ impl Reservoir {
 }
 
 /// Convenience function for running reservoir sampling
-pub fn reservoir_sampling(state: &State, k: usize) -> Reservoir {
-    let m = 1 << 10;
-    let mut reservoir = Reservoir::new(k);
-    reservoir.sampling(&state.reals, &state.imags, m);
+pub fn reservoir_sampling(state: &State, reservoir_size: usize, num_tests: usize) -> Reservoir {
+    let mut reservoir = Reservoir::new(reservoir_size);
+    reservoir.sampling(&state.reals, &state.imags, num_tests);
     reservoir
 }
 
@@ -180,6 +186,33 @@ pub fn iqft(state: &mut State, targets: &[usize]) {
         apply(Gate::H, state, targets[j]);
         for k in (0..j).rev() {
             c_apply(Gate::P(-PI / pow2f(j - k)), state, targets[j], targets[k]);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn encoded_integers() {
+        const N: usize = 3;
+
+        let state = State::new(N);
+        let reservoir = reservoir_sampling(&state, state.len(), state.len() * 10_000);
+        let histogram = reservoir.get_outcome_count();
+        let count = *histogram.get(&0).unwrap();
+        assert_eq!(count, state.len());
+
+        for i in 1..(1 << N) {
+            let mut state = State::new(N);
+            state.reals[0] = 0.0;
+            state.reals[i] = 1.0;
+
+            let reservoir = reservoir_sampling(&state, state.len(), state.len() * 10_000);
+            let histogram = reservoir.get_outcome_count();
+            let count = *histogram.get(&i).unwrap();
+            assert_eq!(count, state.len());
         }
     }
 }

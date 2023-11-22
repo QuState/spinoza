@@ -2,6 +2,7 @@
 
 ## 0.3.0
 
+- `to_table()` now returns a `String` in lieu of just printing the table
 - Provide improved examples for python interface users
 - Update dependencies to latest available releases
 - Update python bindings to reflect latest changes/features

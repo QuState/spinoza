@@ -56,7 +56,7 @@ mod tests {
 
     #[test]
     fn modulus_unit_circle() {
-        let angles = linspace(0.0, PI, Some(100));
+        let angles = linspace(0.0, 2.0 * PI, Some(100));
         for angle in angles.into_iter() {
             let amplitude = Amplitude {
                 re: angle.cos(),

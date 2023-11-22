@@ -114,9 +114,10 @@ impl QuantumCircuit {
     }
 
     pub fn get_statevector(&self) -> PyResult<PyState> {
-        let temp = PyState {
-            data: self.qc.state.clone(),
-        };
+        let temp =
+            PyState {
+                data: self.qc.state.clone(),
+            };
         Ok(temp)
     }
 
@@ -233,8 +234,12 @@ impl QuantumCircuit {
 }
 
 #[pyfunction]
-pub fn get_samples(state: &PyState, k: usize) -> HashMap<usize, usize> {
-    reservoir_sampling(&state.data, k).get_outcome_count()
+pub fn get_samples(
+    state: &PyState,
+    reservoir_size: usize,
+    num_tests: usize,
+) -> HashMap<usize, usize> {
+    reservoir_sampling(&state.data, reservoir_size, num_tests).get_outcome_count()
 }
 
 #[pyfunction]

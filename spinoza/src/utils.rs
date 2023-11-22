@@ -221,8 +221,9 @@ pub fn mat_mul_2x2(m0: [Amplitude; 4], m1: [Amplitude; 4]) -> [Amplitude; 4] {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashMap;
+
+    use super::*;
 
     // color values taken from: https://www.rapidtables.com/convert/color/hsv-to-rgb.html
     #[test]

@@ -114,10 +114,9 @@ impl QuantumCircuit {
     }
 
     pub fn get_statevector(&self) -> PyResult<PyState> {
-        let temp =
-            PyState {
-                data: self.qc.state.clone(),
-            };
+        let temp = PyState {
+            data: self.qc.state.clone(),
+        };
         Ok(temp)
     }
 

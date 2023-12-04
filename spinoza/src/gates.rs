@@ -860,17 +860,16 @@ fn ry_c_apply_strategy3(state: &mut State, control: usize, target: usize, angle:
             let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
             let s0 = s1 - dist;
 
-            let (a, b, c, d) =
-                unsafe {
-                    // a + ib
-                    let a = *state_re.get().add(s0);
-                    let b = *state_im.get().add(s0);
+            let (a, b, c, d) = unsafe {
+                // a + ib
+                let a = *state_re.get().add(s0);
+                let b = *state_im.get().add(s0);
 
-                    // c + id
-                    let c = *state_re.get().add(s1);
-                    let d = *state_im.get().add(s1);
-                    (a, b, c, d)
-                };
+                // c + id
+                let c = *state_re.get().add(s1);
+                let d = *state_im.get().add(s1);
+                (a, b, c, d)
+            };
 
             unsafe {
                 *state_re.get().add(s0) = a * cos - c * sin;
@@ -885,17 +884,16 @@ fn ry_c_apply_strategy3(state: &mut State, control: usize, target: usize, angle:
             let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
             let s0 = s1 - dist;
 
-            let (a, b, c, d) =
-                unsafe {
-                    // a + ib
-                    let a = *state_re.get().add(s0);
-                    let b = *state_im.get().add(s0);
+            let (a, b, c, d) = unsafe {
+                // a + ib
+                let a = *state_re.get().add(s0);
+                let b = *state_im.get().add(s0);
 
-                    // c + id
-                    let c = *state_re.get().add(s1);
-                    let d = *state_im.get().add(s1);
-                    (a, b, c, d)
-                };
+                // c + id
+                let c = *state_re.get().add(s1);
+                let d = *state_im.get().add(s1);
+                (a, b, c, d)
+            };
 
             unsafe {
                 *state_re.get().add(s0) = a * cos - c * sin;
@@ -972,21 +970,18 @@ fn u_apply(state: &mut State, target: usize, theta: Float, phi: Float, lambda: F
     let (sp, cp) = Float::sin_cos(phi);
 
     let c = Amplitude { re: ct, im: 0.0 };
-    let ncs =
-        Amplitude {
-            re: -cl * st,
-            im: -sl * st,
-        };
-    let es =
-        Amplitude {
-            re: cp * st,
-            im: sp * st,
-        };
-    let ec =
-        Amplitude {
-            re: cpl * ct,
-            im: spl * ct,
-        };
+    let ncs = Amplitude {
+        re: -cl * st,
+        im: -sl * st,
+    };
+    let es = Amplitude {
+        re: cp * st,
+        im: sp * st,
+    };
+    let ec = Amplitude {
+        re: cpl * ct,
+        im: spl * ct,
+    };
     let g = [c, ncs, es, ec];
 
     // NOTE: chunks == end >> target, where end == state.len() >> 1

@@ -70,11 +70,17 @@ pub fn to_table(state: &State) -> String {
             Cell::new(format!("{} = {}", idx, padded_bin(idx, n))),
             Cell::new(format!("{:.5} + i{:.5}", z_re, z_im)),
             Cell::new(format!("{:.5}", modulus(z_re, z_im))),
-            Cell::new(str::repeat(" ", (modulus(z_re, z_im) * 50.0).round() as usize))
-                .bg(complex_to_rgb(z_re, z_im, false)),
+            Cell::new(str::repeat(
+                " ",
+                (modulus(z_re, z_im) * 50.0).round() as usize,
+            ))
+            .bg(complex_to_rgb(z_re, z_im, false)),
             Cell::new(format!("{:.5}", modulus(z_re, z_im).powi(2))),
-            Cell::new(str::repeat(" ", (modulus(z_re, z_im).powi(2) * 50.0).round() as usize))
-                .bg(complex_to_rgb(1.0, 0.0, false)),
+            Cell::new(str::repeat(
+                " ",
+                (modulus(z_re, z_im).powi(2) * 50.0).round() as usize,
+            ))
+            .bg(complex_to_rgb(1.0, 0.0, false)),
         ]);
     });
     table.force_no_tty().enforce_styling().style_text_only();
@@ -133,20 +139,19 @@ fn hsv_to_rgb(hue: f32, sat: f32, val: f32) -> [u8; 3] {
     let q = v * (1.0 - s * f);
     let t = v * (1.0 - s * (1.0 - f));
 
-    let (r, g, b) =
-        if i == 0 {
-            (v, t, p)
-        } else if i == 1 {
-            (q, v, p)
-        } else if i == 2 {
-            (p, v, t)
-        } else if i == 3 {
-            (p, q, v)
-        } else if i == 4 {
-            (t, p, v)
-        } else {
-            (v, p, q)
-        };
+    let (r, g, b) = if i == 0 {
+        (v, t, p)
+    } else if i == 1 {
+        (q, v, p)
+    } else if i == 2 {
+        (p, v, t)
+    } else if i == 3 {
+        (p, q, v)
+    } else if i == 4 {
+        (t, p, v)
+    } else {
+        (v, p, q)
+    };
     [
         (r * 255.0).round() as u8,
         (g * 255.0).round() as u8,

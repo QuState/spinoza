@@ -2,6 +2,8 @@
 
 ## 0.3.0
 
+- Add example for sampling
+- Parallelize sampling and add sampling tests
 - `to_table()` now returns a `String` in lieu of just printing the table
 - Provide improved examples for python interface users
 - Update dependencies to latest available releases

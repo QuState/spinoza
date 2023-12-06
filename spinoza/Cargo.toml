@@ -18,7 +18,7 @@ double = []
 
 [dependencies]
 arrayvec = "0.7.4"
-clap = { version = "4.4.8", features = ["derive"] }
+clap = { version = "4.4.11", features = ["derive"] }
 comfy-table = "7.1.0"
 env_logger = "0.10.1"
 evalexpr = "11.2.0"

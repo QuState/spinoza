@@ -24,6 +24,7 @@ impl Index<usize> for QuantumRegister {
 impl QuantumRegister {
     /// Create a new QuantumRegister
     pub fn new(size: usize) -> Self {
+        assert!(size > 0);
         QuantumRegister((0..size).collect())
     }
 
@@ -37,7 +38,13 @@ impl QuantumRegister {
     /// Update quantum register by shift
     #[inline]
     pub fn update_shift(&mut self, shift: usize) {
-        self.0 = (shift..shift + self.len()).collect();
+        self.0.iter_mut().for_each(|x| *x += shift);
+    }
+
+    /// Get the shift size for this register
+    #[inline]
+    pub fn get_shift(&self) -> usize {
+        self[0]
     }
 }
 
@@ -52,13 +59,51 @@ pub enum Controls {
     Ones(Vec<usize>),
 
     /// Mixed Controls
-    #[allow(dead_code)]
     Mixed {
         /// Control qubits
         controls: Vec<usize>,
         /// Zeroes
         zeros: HashSet<usize>,
     },
+}
+
+impl Controls {
+    fn from(&self, controls: &[usize], zeros: Option<HashSet<usize>>) -> Self {
+        if let Some(zs) = zeros {
+            Self::Mixed {
+                controls: controls.to_vec(),
+                zeros: zs,
+            }
+        } else if controls.is_empty() {
+            Self::None
+        } else if controls.len() == 1 {
+            Self::Single(controls[0])
+        } else {
+            Self::Ones(controls.to_vec())
+        }
+    }
+
+    fn unpack(&self) -> (Vec<usize>, HashSet<usize>) {
+        match self {
+            Self::None => (vec![], HashSet::new()),
+            Self::Single(c0) => (vec![*c0], HashSet::new()),
+            Self::Ones(controls) => (controls.clone(), HashSet::new()),
+            Self::Mixed { controls, zeros } => (controls.clone(), zeros.clone()),
+        }
+    }
+
+    fn new_with_control(&self, control: usize, shift: usize) -> Self {
+        let (mut controls, mut zeros) = self.unpack();
+        controls.iter_mut().for_each(|c| *c += shift);
+        controls.push(control);
+
+        if zeros.is_empty() {
+            self.from(&controls, None)
+        } else {
+            zeros = zeros.iter().map(|z| z + shift).collect();
+            self.from(&controls, Some(zeros))
+        }
+    }
 }
 
 /// QuantumTransformation to be applied to the State
@@ -119,13 +164,14 @@ impl QubitTracker {
 /// A model of a Quantum circuit
 /// See <https://en.wikipedia.org/wiki/Quantum_circuit>
 pub struct QuantumCircuit {
-    transformations: Vec<QuantumTransformation>,
+    /// The list of operations to be applied to the State
+    pub transformations: Vec<QuantumTransformation>,
     /// The Quantum State to which transformations are applied
     pub state: State,
     qubit_tracker: QubitTracker,
     /// The sizes of the provided quantum registers
     #[allow(dead_code)]
-    quantum_registers_info: Vec<usize>,
+    pub quantum_registers_info: Vec<usize>,
 }
 
 impl QuantumCircuit {
@@ -140,7 +186,7 @@ impl QuantumCircuit {
             qr_sizes.push(r.len());
             bits += r.len();
         }
-        QuantumCircuit {
+        Self {
             transformations: Vec::new(),
             state: State::new(bits),
             qubit_tracker: QubitTracker::new(),
@@ -348,6 +394,69 @@ impl QuantumCircuit {
         }
     }
 
+    /// Append a QuantumCircuit to the given register of *this* QuantumCircuit
+    pub fn append(&mut self, circuit: &QuantumCircuit, reg: &QuantumRegister) {
+        assert!(reg.len() == circuit.quantum_registers_info.iter().sum());
+        for tr in circuit.transformations.iter() {
+            self.add(QuantumTransformation {
+                gate: tr.gate,
+                target: reg.get_shift() + tr.target,
+                controls: tr.controls.clone(),
+            });
+        }
+    }
+
+    /// Append a QuantumCircuit to the given register of *this* QuantumCircuit
+    pub fn c_append(&mut self, circuit: &QuantumCircuit, c: usize, reg: &QuantumRegister) {
+        assert!(!std::ops::Range {
+            start: reg.get_shift(),
+            end: reg.get_shift() + reg.len()
+        }
+        .contains(&c));
+        for tr in circuit.transformations.iter() {
+            self.add(QuantumTransformation {
+                gate: tr.gate,
+                target: reg.get_shift() + tr.target,
+                controls: tr.controls.new_with_control(c, reg.get_shift()),
+            });
+        }
+    }
+
+    /// Append a QuantumCircuit to the given register of *this* QuantumCircuit
+    pub fn mc_append(
+        &mut self,
+        circuit: &QuantumCircuit,
+        controls: &[usize],
+        reg: &QuantumRegister,
+    ) {
+        let hashed_controls: HashSet<_> = controls.iter().copied().collect();
+
+        assert_eq!(controls.len(), hashed_controls.len());
+        let range = std::ops::Range {
+            start: reg.get_shift(),
+            end: reg.get_shift() + reg.len(),
+        };
+
+        controls.iter().for_each(|c| {
+            if range.contains(c) {
+                panic!(
+                    "control {} should not be in: Range(start: {} end: {})",
+                    c, range.start, range.end
+                );
+            }
+        });
+
+        for control in controls.iter() {
+            for tr in circuit.transformations.iter() {
+                self.add(QuantumTransformation {
+                    gate: tr.gate,
+                    target: reg.get_shift() + tr.target,
+                    controls: tr.controls.new_with_control(*control, reg.get_shift()),
+                });
+            }
+        }
+    }
+
     /// Add a given `QuantumTransformation` to the list of transformations
     #[inline]
     pub fn add(&mut self, transformation: QuantumTransformation) {
@@ -397,12 +506,22 @@ impl QuantumCircuit {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::utils::to_table;
     use crate::{
         math::modulus,
         utils::{assert_float_closeness, gen_random_state, swap},
     };
 
-    use super::*;
+    #[test]
+    fn register_shift() {
+        const N: usize = 4;
+        let mut qr = QuantumRegister::new(N);
+        assert_eq!(qr.get_shift(), 0);
+
+        qr.update_shift(4);
+        assert_eq!(qr.get_shift(), 4);
+    }
 
     #[test]
     fn value_encoding() {
@@ -727,5 +846,119 @@ mod tests {
 
         assert_eq!(qc1.state.reals, qc2.state.reals);
         assert_eq!(qc1.state.imags, qc2.state.imags);
+    }
+
+    // Helper function for testing QuantumCircuit *append methods
+    fn gate_to_single_qubit_circuit(gate: Gate) -> QuantumCircuit {
+        let mut qr = QuantumRegister::new(1);
+        let mut qc = QuantumCircuit::new(&mut [&mut qr]);
+        qc.add(QuantumTransformation {
+            gate,
+            target: 0,
+            controls: Controls::None,
+        });
+        qc
+    }
+
+    #[test]
+    fn append() {
+        let mut qr0 = QuantumRegister::new(1);
+        let mut qr1 = QuantumRegister::new(1);
+        let mut qc = QuantumCircuit::new(&mut [&mut qr0, &mut qr1]);
+        qc.append(&gate_to_single_qubit_circuit(Gate::H), &qr0);
+        qc.append(&gate_to_single_qubit_circuit(Gate::H), &qr1);
+        qc.execute();
+        println!("{}", to_table(&qc.state));
+    }
+
+    fn gate_to_circuit(gate: Gate, n: usize, target: usize) -> QuantumCircuit {
+        let mut qr = QuantumRegister::new(n);
+        let mut qc = QuantumCircuit::new(&mut [&mut qr]);
+        qc.add(QuantumTransformation {
+            gate,
+            target,
+            controls: Controls::None,
+        });
+        qc
+    }
+
+    fn iqft_circuit(n: usize) -> QuantumCircuit {
+        let mut iqft_qr = QuantumRegister::new(n);
+        let mut iqft_qc = QuantumCircuit::new(&mut [&mut iqft_qr]);
+        let targets: Vec<usize> = (0..n).rev().collect();
+        iqft_qc.iqft(&targets);
+        iqft_qc
+    }
+
+    fn iqft_circuit_from_c_append(n: usize) -> QuantumCircuit {
+        let mut iqft_qr = QuantumRegister::new(n);
+        let mut iqft_qc = QuantumCircuit::new(&mut [&mut iqft_qr]);
+        let targets: Vec<usize> = (0..n).rev().collect();
+
+        for j in (0..targets.len()).rev() {
+            iqft_qc.append(&gate_to_circuit(Gate::H, n, targets[j]), &iqft_qr);
+            for k in (0..j).rev() {
+                let mut qr = QuantumRegister::new(1);
+                qr.update_shift(targets[k]);
+                // iqft_qc.c_append(
+                //     &gate_to_single_qubit_circuit(Gate::P(-PI / pow2f(j - k))),
+                //     targets[j],
+                //     &qr,
+                // );
+                iqft_qc.mc_append(
+                    &gate_to_single_qubit_circuit(Gate::P(-PI / pow2f(j - k))),
+                    &[targets[j]],
+                    &qr,
+                );
+            }
+        }
+
+        iqft_qc
+    }
+
+    #[test]
+    fn append_value_encoding() {
+        let n = 3;
+        let v = 4.7;
+        let mut qr = QuantumRegister::new(n);
+        let mut qc = QuantumCircuit::new(&mut [&mut qr]);
+
+        for t in 0..n {
+            qc.append(&gate_to_circuit(Gate::H, n, t), &qr);
+        }
+        for t in 0..n {
+            qc.append(
+                &gate_to_circuit(Gate::P(2.0 * PI / (pow2f(t + 1)) * v), n, t),
+                &qr,
+            );
+        }
+
+        let iqft_qc = iqft_circuit(n);
+        qc.append(&iqft_qc, &qr);
+        qc.execute();
+        println!("{}", to_table(&qc.state));
+    }
+
+    #[test]
+    fn c_append_value_encoding() {
+        let n = 3;
+        let v = 4.7;
+        let mut qr = QuantumRegister::new(n);
+        let mut qc = QuantumCircuit::new(&mut [&mut qr]);
+
+        for t in 0..n {
+            qc.append(&gate_to_circuit(Gate::H, n, t), &qr);
+        }
+        for t in 0..n {
+            qc.append(
+                &gate_to_circuit(Gate::P(2.0 * PI / (pow2f(t + 1)) * v), n, t),
+                &qr,
+            );
+        }
+
+        let iqft_qc = iqft_circuit_from_c_append(n);
+        qc.append(&iqft_qc, &qr);
+        qc.execute();
+        println!("{}", to_table(&qc.state));
     }
 }

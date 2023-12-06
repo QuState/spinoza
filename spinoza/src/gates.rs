@@ -1,5 +1,6 @@
 //! Abstractions for quantum logic gates
 use rayon::prelude::*;
+use std::collections::HashSet;
 
 use crate::{
     config::Config,
@@ -216,6 +217,39 @@ pub fn cc_apply(gate: Gate, state: &mut State, control0: usize, control1: usize,
     }
 }
 
+/// Multiple Controls, Single Target
+pub fn mc_apply(
+    gate: Gate,
+    state: &mut State,
+    controls: &[usize],
+    zeros: Option<HashSet<usize>>,
+    target: usize,
+) {
+    debug_assert!(usize::from(state.n) > controls.len());
+    let mut mask: u64 = 0;
+
+    if let Some(z) = zeros {
+        for control in controls.iter() {
+            if z.contains(control) {
+                continue;
+            }
+            mask |= 1 << control
+        }
+    } else {
+        for control in controls.iter() {
+            mask |= 1 << control
+        }
+    }
+
+    match gate {
+        Gate::X => x_mc_apply(state, mask, target),
+        // Gate::P(theta) => p_mc_apply(state, control, target, theta),
+        // Gate::RX(theta) => rx_mc_apply(state, control, target, theta),
+        // Gate::RY(theta) => ry_mc_apply(state, control, target, theta),
+        _ => todo!(),
+    }
+}
+
 fn x_apply_target_0(state_re: SendPtr<Float>, state_im: SendPtr<Float>, s0: usize) {
     unsafe {
         std::ptr::swap(state_re.get().add(s0), state_re.get().add(s0 + 1));
@@ -302,6 +336,29 @@ fn x_cc_apply(state: &mut State, control0: usize, control1: usize, target: usize
     while i < state.len() {
         let c0c1_set = (((i >> control0) & 1) != 0) && (((i >> control1) & 1) != 0);
         if c0c1_set {
+            let s0 = i;
+            let s1 = i + dist;
+            unsafe {
+                let temp0 = *state.reals.get_unchecked(s0);
+                *state.reals.get_unchecked_mut(s0) = *state.reals.get_unchecked(s1);
+                *state.reals.get_unchecked_mut(s1) = temp0;
+
+                let temp1 = *state.imags.get_unchecked(s0);
+                *state.imags.get_unchecked_mut(s0) = *state.imags.get_unchecked(s1);
+                *state.imags.get_unchecked_mut(s1) = temp1;
+            };
+            i += dist;
+        }
+        i += 1;
+    }
+}
+
+fn x_mc_apply(state: &mut State, mask: u64, target: usize) {
+    let mut i = 0;
+    let dist = 1 << target;
+
+    while i < state.len() {
+        if (i as u64 & mask) == mask {
             let s0 = i;
             let s1 = i + dist;
             unsafe {

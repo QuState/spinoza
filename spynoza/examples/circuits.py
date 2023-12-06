@@ -1,6 +1,7 @@
 import argparse
+
 import numpy as np
-from spynoza import QuantumRegister, QuantumCircuit, show_table
+from spynoza import QuantumRegister, QuantumCircuit
 
 
 def qcbm(n):

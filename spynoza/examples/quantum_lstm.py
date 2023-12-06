@@ -1,5 +1,6 @@
-from math import pi, atan
 import random
+from math import pi, atan
+
 from spynoza import QuantumCircuit, QuantumRegister, show_table
 
 

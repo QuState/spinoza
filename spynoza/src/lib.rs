@@ -1,16 +1,17 @@
-extern crate spinoza as spinoza_rs;
+extern crate spinoza;
 
 use std::collections::HashMap;
 
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
 
-use spinoza_rs::{
+use spinoza::{
     circuit::{
-        QuantumCircuit as QuantumCircuitRS, QuantumRegister as QuantumRegisterRS,
+        Controls, QuantumCircuit as QuantumCircuitRS, QuantumRegister as QuantumRegisterRS,
         QuantumTransformation as QuantumTransformationRS,
     },
     core::{reservoir_sampling, State},
+    gates::Gate,
     math::{Amplitude, Float},
     utils::to_table,
 };
@@ -87,6 +88,82 @@ impl QuantumRegister {
 
 #[pyclass]
 #[derive(Clone)]
+pub struct PyQuantumTransformation {
+    #[pyo3(get, set)]
+    pub target: usize,
+    #[pyo3(get, set)]
+    pub controls: Option<Vec<usize>>,
+    #[pyo3(get, set)]
+    pub name: String,
+    #[pyo3(get, set)]
+    pub arg: Option<(Float, Float, Float)>,
+}
+
+#[pymethods]
+impl PyQuantumTransformation {
+    fn __str__(&self) -> String {
+        let mut s = String::new();
+        s.push_str(&format!("name: {}\n", self.name));
+        s.push_str(&format!("target: {}\n", self.target));
+
+        if let Some(a) = self.arg {
+            s.push_str(&format!("arg: ({}, {}, {})\n", a.0, a.1, a.2));
+        } else {
+            s.push_str("arg: None\n");
+        }
+        if let Some(c) = &self.controls {
+            let mut controls_str = String::with_capacity(c.len() + 2);
+            controls_str.push('[');
+            c.iter().enumerate().for_each(|(i, n)| {
+                controls_str.push_str(&n.to_string());
+                if i < c.len() - 1 {
+                    controls_str.push(',');
+                }
+            });
+            controls_str.push(']');
+            s.push_str(&format!("controls: {}", controls_str));
+        } else {
+            s.push_str("controls: None");
+        }
+        s
+    }
+}
+
+impl From<QuantumTransformationRS> for PyQuantumTransformation {
+    fn from(item: QuantumTransformationRS) -> Self {
+        let target = item.target;
+
+        let controls = match item.controls {
+            Controls::Single(q) => Some(vec![q]),
+            Controls::Ones(ones) => Some(ones),
+            Controls::None => None,
+            Controls::Mixed { .. } => todo!(),
+        };
+
+        let (name, arg) = match item.gate {
+            Gate::H => ("h", None),
+            Gate::X => ("x", None),
+            Gate::Y => ("y", None),
+            Gate::Z => ("z", None),
+            Gate::P(angle) => ("p", Some((angle, 0.0, 0.0))),
+            Gate::RX(angle) => ("rx", Some((angle, 0.0, 0.0))),
+            Gate::RY(angle) => ("ry", Some((angle, 0.0, 0.0))),
+            Gate::RZ(angle) => ("rz", Some((angle, 0.0, 0.0))),
+            Gate::U((a, b, c)) => ("u", Some((a, b, c))),
+            _ => todo!(),
+        };
+
+        Self {
+            target,
+            name: name.into(),
+            arg,
+            controls,
+        }
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
 pub struct QuantumTransformation {
     qt: QuantumTransformationRS,
 }
@@ -113,11 +190,29 @@ impl QuantumCircuit {
         }
     }
 
+    #[getter(num_qubits)]
+    fn num_qubits(&self) -> u8 {
+        self.qc.state.n
+    }
+
+    #[getter(register_sizes)]
+    pub fn get_register_sizes(&self) -> Vec<usize> {
+        self.qc.quantum_registers_info.clone()
+    }
+
     pub fn get_statevector(&self) -> PyResult<PyState> {
         let temp = PyState {
             data: self.qc.state.clone(),
         };
         Ok(temp)
+    }
+
+    pub fn get_transformations(&self) -> Vec<PyQuantumTransformation> {
+        self.qc
+            .transformations
+            .iter()
+            .map(|t| t.clone().into())
+            .collect()
     }
 
     #[inline]
@@ -171,6 +266,10 @@ impl QuantumCircuit {
     }
 
     // Controlled gates
+    // pub fn ch(&mut self, control: usize, target: usize) {
+    //     self.qc.ch(control, target)
+    // }
+
     #[inline]
     pub fn cx(&mut self, control: usize, target: usize) {
         self.qc.cx(control, target)
@@ -201,6 +300,11 @@ impl QuantumCircuit {
         self.qc.cry(angle, control, target)
     }
 
+    // #[inline]
+    // pub fn crz(&mut self, angle: Float, control: usize, target: usize) {
+    //     self.qc.crz(angle, control, target)
+    // }
+
     // Special gates
     #[inline]
     pub fn measure(&mut self, target: usize) {
@@ -225,6 +329,11 @@ impl QuantumCircuit {
             controls: q_transformation.qt.controls,
         })
     }
+
+    // #[inline]
+    // pub fn append(&mut self, circuit: &QuantumCircuit, quantum_register: &QuantumRegister) {
+    //     self.qc.append()
+    // }
 
     #[inline]
     pub fn execute(&mut self) {
@@ -255,5 +364,6 @@ fn spynoza(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PyState>()?;
     m.add_class::<QuantumRegister>()?;
     m.add_class::<QuantumCircuit>()?;
+    m.add_class::<PyQuantumTransformation>()?;
     Ok(())
 }

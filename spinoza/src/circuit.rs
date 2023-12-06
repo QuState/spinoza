@@ -168,9 +168,9 @@ pub struct QuantumCircuit {
     pub transformations: Vec<QuantumTransformation>,
     /// The Quantum State to which transformations are applied
     pub state: State,
+    /// Tracks measured qubits for dynamic circuits
     qubit_tracker: QubitTracker,
     /// The sizes of the provided quantum registers
-    #[allow(dead_code)]
     pub quantum_registers_info: Vec<usize>,
 }
 
@@ -860,17 +860,7 @@ mod tests {
         qc
     }
 
-    #[test]
-    fn append() {
-        let mut qr0 = QuantumRegister::new(1);
-        let mut qr1 = QuantumRegister::new(1);
-        let mut qc = QuantumCircuit::new(&mut [&mut qr0, &mut qr1]);
-        qc.append(&gate_to_single_qubit_circuit(Gate::H), &qr0);
-        qc.append(&gate_to_single_qubit_circuit(Gate::H), &qr1);
-        qc.execute();
-        println!("{}", to_table(&qc.state));
-    }
-
+    // Helper function for testing `QuantumCircuit`'s `append` method
     fn gate_to_circuit(gate: Gate, n: usize, target: usize) -> QuantumCircuit {
         let mut qr = QuantumRegister::new(n);
         let mut qc = QuantumCircuit::new(&mut [&mut qr]);
@@ -882,6 +872,8 @@ mod tests {
         qc
     }
 
+    // Helper function for creating an IQFT circuit for testing `QuantumCicuit`'s
+    // `append` method
     fn iqft_circuit(n: usize) -> QuantumCircuit {
         let mut iqft_qr = QuantumRegister::new(n);
         let mut iqft_qc = QuantumCircuit::new(&mut [&mut iqft_qr]);
@@ -890,7 +882,9 @@ mod tests {
         iqft_qc
     }
 
-    fn iqft_circuit_from_c_append(n: usize) -> QuantumCircuit {
+    // Helper function for creating an IQFT circuit for testing `QuantumCircuit`'s
+    // `c_append` or `mc_append` method
+    fn iqft_circuit_from_controlled_append(n: usize, multi_control: bool) -> QuantumCircuit {
         let mut iqft_qr = QuantumRegister::new(n);
         let mut iqft_qc = QuantumCircuit::new(&mut [&mut iqft_qr]);
         let targets: Vec<usize> = (0..n).rev().collect();
@@ -900,26 +894,48 @@ mod tests {
             for k in (0..j).rev() {
                 let mut qr = QuantumRegister::new(1);
                 qr.update_shift(targets[k]);
-                // iqft_qc.c_append(
-                //     &gate_to_single_qubit_circuit(Gate::P(-PI / pow2f(j - k))),
-                //     targets[j],
-                //     &qr,
-                // );
-                iqft_qc.mc_append(
-                    &gate_to_single_qubit_circuit(Gate::P(-PI / pow2f(j - k))),
-                    &[targets[j]],
-                    &qr,
-                );
+                if multi_control {
+                    iqft_qc.mc_append(
+                        &gate_to_single_qubit_circuit(Gate::P(-PI / pow2f(j - k))),
+                        &[targets[j]],
+                        &qr,
+                    );
+                } else {
+                    iqft_qc.c_append(
+                        &gate_to_single_qubit_circuit(Gate::P(-PI / pow2f(j - k))),
+                        targets[j],
+                        &qr,
+                    );
+                }
             }
         }
-
         iqft_qc
+    }
+
+    #[test]
+    fn append() {
+        let mut qr0 = QuantumRegister::new(1);
+        let mut qr1 = QuantumRegister::new(1);
+        let mut qc = QuantumCircuit::new(&mut [&mut qr0, &mut qr1]);
+        qc.append(&gate_to_single_qubit_circuit(Gate::H), &qr0);
+        qc.append(&gate_to_single_qubit_circuit(Gate::H), &qr1);
+        qc.execute();
+
+        qc.state
+            .reals
+            .iter()
+            .zip(qc.state.imags.iter())
+            .for_each(|(z_re, z_im)| {
+                assert_float_closeness(*z_re, 0.5, 0.0001);
+                assert_float_closeness(*z_im, 0.0, 0.0001);
+            });
+        println!("{}", to_table(&qc.state));
     }
 
     #[test]
     fn append_value_encoding() {
         let n = 3;
-        let v = 4.7;
+        let v = 4.0;
         let mut qr = QuantumRegister::new(n);
         let mut qc = QuantumCircuit::new(&mut [&mut qr]);
 
@@ -936,13 +952,30 @@ mod tests {
         let iqft_qc = iqft_circuit(n);
         qc.append(&iqft_qc, &qr);
         qc.execute();
+
+        let encoded_integer = v as usize;
+
+        qc.state
+            .reals
+            .iter()
+            .zip(qc.state.imags.iter())
+            .enumerate()
+            .for_each(|(i, (z_re, z_im))| {
+                if i == encoded_integer {
+                    assert_float_closeness(*z_re, 1.0, 0.0001);
+                    assert_float_closeness(*z_im, 0.0, 0.0001);
+                } else {
+                    assert_float_closeness(*z_re, 0.0, 0.0001);
+                    assert_float_closeness(*z_im, 0.0, 0.0001);
+                }
+            });
         println!("{}", to_table(&qc.state));
     }
 
     #[test]
     fn c_append_value_encoding() {
         let n = 3;
-        let v = 4.7;
+        let v = 4.0;
         let mut qr = QuantumRegister::new(n);
         let mut qc = QuantumCircuit::new(&mut [&mut qr]);
 
@@ -956,9 +989,65 @@ mod tests {
             );
         }
 
-        let iqft_qc = iqft_circuit_from_c_append(n);
+        let iqft_qc = iqft_circuit_from_controlled_append(n, false);
         qc.append(&iqft_qc, &qr);
         qc.execute();
+        let encoded_integer = v as usize;
+
+        qc.state
+            .reals
+            .iter()
+            .zip(qc.state.imags.iter())
+            .enumerate()
+            .for_each(|(i, (z_re, z_im))| {
+                if i == encoded_integer {
+                    assert_float_closeness(*z_re, 1.0, 0.0001);
+                    assert_float_closeness(*z_im, 0.0, 0.0001);
+                } else {
+                    assert_float_closeness(*z_re, 0.0, 0.0001);
+                    assert_float_closeness(*z_im, 0.0, 0.0001);
+                }
+            });
+        println!("{}", to_table(&qc.state));
+    }
+
+    #[test]
+    fn mc_append_value_encoding() {
+        let n = 3;
+        let v = 4.0;
+        let mut qr = QuantumRegister::new(n);
+        let mut qc = QuantumCircuit::new(&mut [&mut qr]);
+
+        for t in 0..n {
+            qc.append(&gate_to_circuit(Gate::H, n, t), &qr);
+        }
+        for t in 0..n {
+            qc.append(
+                &gate_to_circuit(Gate::P(2.0 * PI / (pow2f(t + 1)) * v), n, t),
+                &qr,
+            );
+        }
+
+        let iqft_qc = iqft_circuit_from_controlled_append(n, true);
+        qc.append(&iqft_qc, &qr);
+        qc.execute();
+
+        let encoded_integer = v as usize;
+
+        qc.state
+            .reals
+            .iter()
+            .zip(qc.state.imags.iter())
+            .enumerate()
+            .for_each(|(i, (z_re, z_im))| {
+                if i == encoded_integer {
+                    assert_float_closeness(*z_re, 1.0, 0.0001);
+                    assert_float_closeness(*z_im, 0.0, 0.0001);
+                } else {
+                    assert_float_closeness(*z_re, 0.0, 0.0001);
+                    assert_float_closeness(*z_im, 0.0, 0.0001);
+                }
+            });
         println!("{}", to_table(&qc.state));
     }
 }

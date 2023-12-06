@@ -76,7 +76,7 @@ impl QuantumRegister {
     }
 
     #[inline]
-    fn len(&self) -> usize {
+    fn __len__(&self) -> usize {
         self.qr.len()
     }
 
@@ -330,10 +330,30 @@ impl QuantumCircuit {
         })
     }
 
-    // #[inline]
-    // pub fn append(&mut self, circuit: &QuantumCircuit, quantum_register: &QuantumRegister) {
-    //     self.qc.append()
-    // }
+    #[inline]
+    pub fn append(&mut self, circuit: &QuantumCircuit, quantum_register: &QuantumRegister) {
+        self.qc.append(&circuit.qc, &quantum_register.qr)
+    }
+
+    #[inline]
+    pub fn c_append(
+        &mut self,
+        circuit: &QuantumCircuit,
+        c: usize,
+        quantum_register: &QuantumRegister,
+    ) {
+        self.qc.c_append(&circuit.qc, c, &quantum_register.qr)
+    }
+
+    #[inline]
+    pub fn mc_append(
+        &mut self,
+        circuit: &QuantumCircuit,
+        cs: Vec<usize>,
+        quantum_register: &QuantumRegister,
+    ) {
+        self.qc.mc_append(&circuit.qc, &cs, &quantum_register.qr)
+    }
 
     #[inline]
     pub fn execute(&mut self) {

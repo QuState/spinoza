@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from spynoza import QuantumRegister, QuantumCircuit, run
+from spynoza import QuantumRegister, QuantumCircuit, show_table
 
 plt.style.use("ggplot")
 
@@ -67,6 +67,7 @@ def val_encoding(n, v):
 
 
 if __name__ == "__main__":
-    circuit = val_encoding(3, 2.4)
-    state = run(circuit)
-    print(len(state))
+    circuit = val_encoding(3, 4.7)
+    circuit.execute()
+    state = circuit.get_statevector()
+    print(show_table(state))

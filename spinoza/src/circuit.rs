@@ -1,9 +1,10 @@
 //! Abstractions for a quantum circuit
 use std::{collections::HashSet, ops::Index};
 
+use crate::unitaries::Unitary;
 use crate::{
     core::State,
-    gates::{apply, c_apply, cc_apply, Gate},
+    gates::{apply, c_apply, c_transform_u, cc_apply, transform_u, Gate},
     math::{pow2f, Float, PI},
     measurement::measure_qubit,
 };
@@ -203,7 +204,7 @@ impl QuantumCircuit {
     pub fn inverse(&mut self) {
         self.transformations.reverse();
         self.transformations.iter_mut().for_each(|qt| {
-            qt.gate = qt.gate.inverse();
+            qt.gate = qt.gate.clone().inverse();
         });
     }
 
@@ -396,10 +397,13 @@ impl QuantumCircuit {
 
     /// Append a QuantumCircuit to the given register of *this* QuantumCircuit
     pub fn append(&mut self, circuit: &QuantumCircuit, reg: &QuantumRegister) {
-        assert!(reg.len() == circuit.quantum_registers_info.iter().sum());
+        assert_eq!(
+            reg.len(),
+            circuit.quantum_registers_info.iter().sum::<usize>()
+        );
         for tr in circuit.transformations.iter() {
             self.add(QuantumTransformation {
-                gate: tr.gate,
+                gate: tr.gate.clone(),
                 target: reg.get_shift() + tr.target,
                 controls: tr.controls.clone(),
             });
@@ -415,7 +419,7 @@ impl QuantumCircuit {
         .contains(&c));
         for tr in circuit.transformations.iter() {
             self.add(QuantumTransformation {
-                gate: tr.gate,
+                gate: tr.gate.clone(),
                 target: reg.get_shift() + tr.target,
                 controls: tr.controls.new_with_control(c, reg.get_shift()),
             });
@@ -449,7 +453,7 @@ impl QuantumCircuit {
         for control in controls.iter() {
             for tr in circuit.transformations.iter() {
                 self.add(QuantumTransformation {
-                    gate: tr.gate,
+                    gate: tr.gate.clone(),
                     target: reg.get_shift() + tr.target,
                     controls: tr.controls.new_with_control(*control, reg.get_shift()),
                 });
@@ -457,16 +461,52 @@ impl QuantumCircuit {
         }
     }
 
+    /// Add a Unitary for a given target qubit to the list of QuantumTransformations
+    pub fn unitary(&mut self, u: Unitary, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::Unitary(u),
+            target,
+            controls: Controls::None,
+        });
+    }
+
+    /// Append a `Unitary` to a `QuantumRegister`
+    pub fn append_u(&mut self, u: Unitary, qr: &QuantumRegister) {
+        assert_eq!(u.height, u.width);
+        assert_eq!(u.height, 1 << qr.len());
+        self.unitary(u, qr.get_shift());
+    }
+
+    /// Add a controlled Unitary for a given target qubit to the list of QuantumTransformations
+    pub fn c_unitary(&mut self, u: Unitary, c: usize, t: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::Unitary(u),
+            target: t,
+            controls: Controls::Single(c),
+        });
+    }
+
+    /// Append a controlled `Unitary` to a `QuantumRegister`
+    pub fn c_append_u(&mut self, u: Unitary, c: usize, qr: &QuantumRegister) {
+        assert_eq!(u.height, u.width);
+        assert_eq!(u.height, 1 << qr.len());
+        self.c_unitary(u, c, qr.get_shift());
+    }
+
     /// Add a given `QuantumTransformation` to the list of transformations
     #[inline]
     pub fn add(&mut self, transformation: QuantumTransformation) {
-        self.transformations.push(transformation)
+        self.transformations.push(transformation);
     }
 
     /// Run the list of transformations against the State
     pub fn execute(&mut self) {
         for tr in self.transformations.drain(..) {
             match (&tr.controls, tr.gate) {
+                (Controls::None, Gate::Unitary(u)) => transform_u(&mut self.state, &u, tr.target),
+                (Controls::Single(c), Gate::Unitary(u)) => {
+                    c_transform_u(&mut self.state, &u, *c, tr.target)
+                }
                 (Controls::None, Gate::M) => {
                     if !self.qubit_tracker.is_qubit_measured(tr.target) {
                         let value = measure_qubit(&mut self.state, tr.target, true, None);
@@ -715,12 +755,12 @@ mod tests {
         let mut measured_vals = [0; N];
 
         // Now collect the measured values
-        for target in 0..N {
+        for (target, measured_val) in measured_vals.iter_mut().enumerate() {
             let val = qc
                 .qubit_tracker
                 .get_qubit_measured_val(target)
                 .expect("qubit: {target} should be measured");
-            measured_vals[target] = val;
+            *measured_val = val;
         }
 
         // Now we need to measure again...
@@ -734,13 +774,13 @@ mod tests {
         qc.execute();
 
         // Now check that the new measured values are the same as what we got before
-        for target in 0..N {
+        for (target, measured_val) in measured_vals.iter().enumerate() {
             assert!(
                 qc.qubit_tracker.is_qubit_measured(target),
                 "qubit {target} was already measured, but it wasn't marked as measured"
             );
             assert_eq!(
-                measured_vals[target],
+                *measured_val,
                 qc.qubit_tracker
                     .get_qubit_measured_val(target)
                     .expect("qubit: {target} should be measured")

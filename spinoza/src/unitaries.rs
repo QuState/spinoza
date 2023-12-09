@@ -3,13 +3,14 @@
 use crate::{core::State, gates::Gate, math::Float};
 
 /// A representation of a Unitary Matrix
+#[derive(Clone)]
 pub struct Unitary {
-    reals: Vec<Float>,
-    imags: Vec<Float>,
+    pub(crate) reals: Vec<Float>,
+    pub(crate) imags: Vec<Float>,
     /// The number of rows in the matrix
-    height: usize,
+    pub height: usize,
     /// The number of columns in the matrix
-    width: usize,
+    pub width: usize,
 }
 
 impl Unitary {

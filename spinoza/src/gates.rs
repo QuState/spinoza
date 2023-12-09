@@ -2,6 +2,7 @@
 use rayon::prelude::*;
 use std::collections::HashSet;
 
+use crate::unitaries::Unitary;
 use crate::{
     config::Config,
     consts::{H, X, Y, Z},
@@ -39,7 +40,7 @@ impl<T> Copy for SendPtr<T> {}
 
 /// Quantum Logic Gates
 /// See <https://en.wikipedia.org/wiki/Quantum_logic_gate> for more info
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum Gate {
     /// Hadamard gate. See <https://en.wikipedia.org/wiki/Quantum_logic_gate#Hadamard_gate>
     H,
@@ -65,19 +66,22 @@ pub enum Gate {
     SWAP((usize, usize)),
     /// General single qubit rotation. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Other_named_gates>
     U((Float, Float, Float)),
+    /// A Unitary matrix. See <https://mathworld.wolfram.com/UnitaryMatrix.html>
+    Unitary(Unitary),
 }
 
 impl Gate {
     /// Return the inverted gate
-    pub fn inverse(&self) -> Self {
-        match *self {
-            Self::H | Self::X | Self::Y | Self::Z | Self::SWAP((_, _)) => *self,
+    pub fn inverse(self) -> Self {
+        match self {
+            Self::H | Self::X | Self::Y | Self::Z | Self::SWAP((_, _)) => self,
             Self::P(theta) => Self::P(-theta),
             Self::RX(theta) => Self::RX(-theta),
             Self::RY(theta) => Self::RY(-theta),
             Self::RZ(theta) => Self::RZ(-theta),
             Self::U((theta, phi, lambda)) => Self::U((-theta, -lambda, -phi)),
             Self::M => unimplemented!(),
+            Self::Unitary(_) => todo!(),
         }
     }
 
@@ -1065,6 +1069,87 @@ fn swap_apply(state: &mut State, t0: usize, t1: usize) {
             let j = i + (1 << t0) - (1 << t1);
             state.reals.swap(i, j);
             state.imags.swap(i, j);
+        }
+    }
+}
+
+fn multiply_unitary(
+    u: &Unitary,
+    vec_reals: &[Float],
+    vec_imags: &[Float],
+) -> (Vec<Float>, Vec<Float>) {
+    let mut result_reals = vec![0.0; u.height];
+    let mut result_imags = vec![0.0; u.height];
+
+    for i in 0..u.height {
+        for j in 0..u.width {
+            let index = i * u.width + j;
+            result_reals[i] += u.reals[index] * vec_reals[j] - u.imags[index] * vec_imags[j];
+            result_imags[i] += u.reals[index] * vec_imags[j] + u.imags[index] * vec_reals[j];
+        }
+    }
+    (result_reals, result_imags)
+}
+
+/// Apply a Unitary to the `State`
+pub fn transform_u(state: &mut State, u: &Unitary, t: usize) {
+    assert_eq!(u.height, u.width);
+    let m: usize = usize::try_from(u.height.ilog2()).unwrap();
+    let n: usize = usize::try_from(u.width.ilog2()).unwrap();
+
+    let mut vec_reals = vec![0.0; 1 << m];
+    let mut vec_imags = vec![0.0; 1 << m];
+
+    for suffix in 0..(1 << t) {
+        for prefix in 0..(1 << (n - m - t)) {
+            for target in 0..(1 << m) {
+                let k = prefix * (1 << (t + m)) + target * (1 << t) + suffix;
+                vec_reals[target] = state.reals[k];
+                vec_imags[target] = state.imags[k];
+            }
+
+            let (vec_reals_out, vec_imags_out) = multiply_unitary(u, &vec_reals, &vec_imags);
+
+            for target in 0..(1 << m) {
+                let k = prefix * (1 << (t + m)) + target * (1 << t) + suffix;
+                state.reals[k] = vec_reals_out[target];
+                state.imags[k] = vec_imags_out[target];
+            }
+        }
+    }
+}
+
+/// Apply a controlled Unitary to the `State`
+pub fn c_transform_u(state: &mut State, u: &Unitary, c: usize, t: usize) {
+    assert_eq!(u.height, u.width);
+    let m: usize = usize::try_from(u.height.ilog2()).unwrap();
+    let n: usize = usize::try_from(u.width.ilog2()).unwrap();
+
+    let mut vec_reals = vec![0.0; 1 << m];
+    let mut vec_imags = vec![0.0; 1 << m];
+    let mut targets = Vec::new();
+
+    for suffix in 0..(1 << t) {
+        for prefix in 0..(1 << (n - m - t)) {
+            targets.clear();
+            for idx in 0..(1 << m) {
+                let k = prefix * (1 << (t + m)) + idx * (1 << t) + suffix;
+                if ((k >> c) & 1) == 1 {
+                    vec_reals[idx] = state.reals[k];
+                    vec_imags[idx] = state.imags[k];
+                    targets.push(k)
+                }
+            }
+
+            let (vec_reals_out, vec_imags_out) = multiply_unitary(u, &vec_reals, &vec_imags);
+
+            for idx in 0..(1 << m) {
+                let k = prefix * (1 << (t + m)) + idx * (1 << t) + suffix;
+                if ((k >> c) & 1) == 1 {
+                    state.reals[k] = vec_reals_out[idx];
+                    state.imags[k] = vec_imags_out[idx];
+                }
+            }
         }
     }
 }

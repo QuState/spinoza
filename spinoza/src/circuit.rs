@@ -1,6 +1,7 @@
 //! Abstractions for a quantum circuit
 use std::{collections::HashSet, ops::Index};
 
+use crate::gates::mc_apply;
 use crate::unitaries::Unitary;
 use crate::{
     core::State,
@@ -536,9 +537,16 @@ impl QuantumCircuit {
                         tr.target,
                     );
                 }
-                _ => {
-                    todo!();
+                (Controls::Mixed { controls, zeros }, gate) => {
+                    mc_apply(
+                        gate,
+                        &mut self.state,
+                        controls,
+                        Some(zeros.to_owned()),
+                        tr.target,
+                    );
                 }
+                _ => todo!(),
             }
         }
     }

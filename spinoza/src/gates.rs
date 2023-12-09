@@ -1073,22 +1073,41 @@ fn swap_apply(state: &mut State, t0: usize, t1: usize) {
     }
 }
 
-fn multiply_unitary(
-    u: &Unitary,
+fn unitary_col_vec_mul(
+    unitary: &Unitary,
     vec_reals: &[Float],
     vec_imags: &[Float],
 ) -> (Vec<Float>, Vec<Float>) {
-    let mut result_reals = vec![0.0; u.height];
-    let mut result_imags = vec![0.0; u.height];
+    assert!(
+        unitary.height == unitary.width
+            && vec_reals.len() == unitary.height
+            && vec_imags.len() == unitary.height
+    );
+    let chunk_size = unitary.width;
 
-    for i in 0..u.height {
-        for j in 0..u.width {
-            let index = i * u.width + j;
-            result_reals[i] += u.reals[index] * vec_reals[j] - u.imags[index] * vec_imags[j];
-            result_imags[i] += u.reals[index] * vec_imags[j] + u.imags[index] * vec_reals[j];
-        }
-    }
-    (result_reals, result_imags)
+    let mut reals = Vec::with_capacity(vec_reals.len());
+    let mut imags = Vec::with_capacity(vec_imags.len());
+
+    unitary
+        .reals
+        .chunks_exact(chunk_size)
+        .zip(unitary.imags.chunks_exact(chunk_size))
+        .for_each(|(row_reals, row_imags)| {
+            let mut dot_prod_re = 0.0;
+            let mut dot_prod_im = 0.0;
+            row_reals
+                .iter()
+                .zip(row_imags.iter())
+                .zip(vec_reals.iter())
+                .zip(vec_imags.iter())
+                .for_each(|(((a, b), s_re), s_im)| {
+                    dot_prod_re += *a * s_re - *b * s_im;
+                    dot_prod_im += *a * s_im + *b * s_re;
+                });
+            reals.push(dot_prod_re);
+            imags.push(dot_prod_im);
+        });
+    (reals, imags)
 }
 
 /// Apply a Unitary to the `State`
@@ -1108,7 +1127,7 @@ pub fn transform_u(state: &mut State, u: &Unitary, t: usize) {
                 vec_imags[target] = state.imags[k];
             }
 
-            let (vec_reals_out, vec_imags_out) = multiply_unitary(u, &vec_reals, &vec_imags);
+            let (vec_reals_out, vec_imags_out) = unitary_col_vec_mul(u, &vec_reals, &vec_imags);
 
             for target in 0..(1 << m) {
                 let k = prefix * (1 << (t + m)) + target * (1 << t) + suffix;
@@ -1141,7 +1160,7 @@ pub fn c_transform_u(state: &mut State, u: &Unitary, c: usize, t: usize) {
                 }
             }
 
-            let (vec_reals_out, vec_imags_out) = multiply_unitary(u, &vec_reals, &vec_imags);
+            let (vec_reals_out, vec_imags_out) = unitary_col_vec_mul(u, &vec_reals, &vec_imags);
 
             for idx in 0..(1 << m) {
                 let k = prefix * (1 << (t + m)) + idx * (1 << t) + suffix;
@@ -1726,5 +1745,40 @@ mod tests {
     fn swap_inverse() {
         let _swap = Gate::SWAP((0, 1));
         let _swap_inv = Gate::SWAP((0, 1)).inverse().to_matrix();
+    }
+
+    #[test]
+    fn unitary_column_vector_multiplication() {
+        // Test case 1: Unitary matrix with real components
+        let u1 = Unitary {
+            height: 2,
+            width: 2,
+            reals: vec![1.0, 0.0, 0.0, 1.0],
+            imags: vec![0.0, 0.0, 0.0, 0.0],
+        };
+
+        let vec_reals1 = vec![2.0, 3.0];
+        let vec_imags1 = vec![4.0, 5.0];
+
+        let (result_reals1, result_imags1) = unitary_col_vec_mul(&u1, &vec_reals1, &vec_imags1);
+
+        assert_eq!(result_reals1, vec![2.0, 3.0]);
+        assert_eq!(result_imags1, vec![4.0, 5.0]);
+
+        // Test case 2: Unitary matrix with complex components
+        let u2 = Unitary {
+            height: 2,
+            width: 2,
+            reals: vec![0.0, 1.0, 1.0, 0.0],
+            imags: vec![0.0, 0.0, 0.0, 0.0],
+        };
+
+        let vec_reals2 = vec![2.0, 3.0];
+        let vec_imags2 = vec![4.0, 5.0];
+
+        let (result_reals2, result_imags2) = unitary_col_vec_mul(&u2, &vec_reals2, &vec_imags2);
+
+        assert_eq!(result_reals2, vec![3.0, 2.0]);
+        assert_eq!(result_imags2, vec![5.0, 4.0]);
     }
 }

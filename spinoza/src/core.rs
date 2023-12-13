@@ -1,10 +1,10 @@
 //! Abstractions for representing a Quantum State
 use std::{collections::HashMap, fmt};
 
-use once_cell::sync::OnceCell;
 use rand::distributions::Uniform;
 use rand::prelude::*;
 use rayon::prelude::*;
+use std::sync::OnceLock;
 
 use crate::{
     config::Config,
@@ -13,7 +13,7 @@ use crate::{
 };
 
 /// Reference to the Config for user passed config args
-pub static CONFIG: OnceCell<Config> = OnceCell::new();
+pub static CONFIG: OnceLock<Config> = OnceLock::new();
 
 #[derive(Clone)]
 /// Representation of a Quantum State. Amplitudes are split between two vectors.

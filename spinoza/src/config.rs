@@ -1,13 +1,12 @@
-//! Configuration options for runnning spinoza
+//! Configuration options for running spinoza
 use clap::Parser;
-use num_cpus;
 
 use crate::core::CONFIG;
 
 /// Config for simulations that are run using the CLI
 #[derive(Clone, Copy, Debug)]
 pub struct Config {
-    /// The number of threads to distribute the worload amongst.
+    /// The number of threads to distribute the workload.
     /// `u32` is used to represent number of threads since 4,294,967,295 is a
     /// reasonable upperbound. If you have access to a matrioshka brain, and you
     /// need a larger data type, please reach out.
@@ -38,7 +37,11 @@ impl Config {
 
     fn test() -> Config {
         Config {
-            threads: num_cpus::get().try_into().unwrap(),
+            threads: std::thread::available_parallelism()
+                .unwrap()
+                .get()
+                .try_into()
+                .expect("Too much power"),
             // no input for tests, so this quantity should not matter
             qubits: 0,
             print: false,
@@ -48,11 +51,15 @@ impl Config {
 
 /// Representation of the CLI args
 #[derive(Parser)]
+#[command(author, version, about)]
 pub struct QSArgs {
+    /// Number of threads to use
     #[clap(short, long)]
     threads: u32,
+    /// Whether or not to print the state in tabular format
     #[clap(short, long)]
     print: bool,
+    /// The number of qubits to use in the system
     #[clap(short, long)]
     qubits: u8,
 }
@@ -64,7 +71,14 @@ mod tests {
     #[test]
     fn no_args() {
         let config = Config::global();
-        assert_eq!(config.threads, num_cpus::get().try_into().unwrap());
+        assert_eq!(
+            config.threads,
+            std::thread::available_parallelism()
+                .unwrap()
+                .get()
+                .try_into()
+                .expect("Too much power")
+        );
         assert_eq!(config.qubits, 0);
         assert!(!config.print);
     }

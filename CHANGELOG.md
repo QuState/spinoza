@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 0.4.0
+
+- The default number of threads is now determined using
+  std::thread::available_parallelism in lieu of using num_cpus.
+- `once_cell` has become a part of the standard library since Rust
+  1.70.0 so usage of `OnceCell has now been replaced with `OnceLock`.
+
 ## 0.3.0
 
 - Add example for sampling

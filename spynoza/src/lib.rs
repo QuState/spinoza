@@ -10,7 +10,7 @@ use spinoza::{
         Controls, QuantumCircuit as QuantumCircuitRS, QuantumRegister as QuantumRegisterRS,
         QuantumTransformation as QuantumTransformationRS,
     },
-    core::{reservoir_sampling, State},
+    core::{qubit_expectation_value as qubit_expval, reservoir_sampling, State},
     gates::Gate,
     math::{Amplitude, Float},
     utils::to_table,
@@ -359,6 +359,24 @@ impl QuantumCircuit {
     pub fn execute(&mut self) {
         self.qc.execute();
     }
+}
+
+// #[pyfunction]
+// pub fn expval(gate: &str, state: &PyState, targets: Vec<usize>) {
+//     if gate == "x" {
+//         todo!();
+//     } else if gate == "y" {
+//         todo!();
+//     } else if gate == "z" {
+//         todo!()
+//     } else {
+//         panic!("{gate} gate not supported");
+//     }
+// }
+
+#[pyfunction]
+pub fn qubit_expectation_value(state: &PyState, target: usize) -> Float {
+    qubit_expval(&state.data, target)
 }
 
 #[pyfunction]

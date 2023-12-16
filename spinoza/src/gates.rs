@@ -247,9 +247,9 @@ pub fn mc_apply(
 
     match gate {
         Gate::X => x_mc_apply(state, mask, target),
-        // Gate::P(theta) => p_mc_apply(state, control, target, theta),
-        // Gate::RX(theta) => rx_mc_apply(state, control, target, theta),
-        // Gate::RY(theta) => ry_mc_apply(state, control, target, theta),
+        Gate::P(theta) => p_mc_apply(state, mask, target, theta),
+        Gate::RX(theta) => rx_mc_apply(state, mask, target, theta),
+        Gate::RY(theta) => ry_mc_apply(state, mask, target, theta),
         _ => todo!(),
     }
 }
@@ -278,7 +278,7 @@ fn x_proc_chunk(state_re: SendPtr<Float>, state_im: SendPtr<Float>, chunk: usize
     }
 }
 
-fn x_apply(state: &mut State, target: usize) {
+pub(crate) fn x_apply(state: &mut State, target: usize) {
     let state_re = SendPtr(state.reals.as_mut_ptr());
     let state_im = SendPtr(state.imags.as_mut_ptr());
 
@@ -400,7 +400,7 @@ fn y_proc_chunk(state_re: SendPtr<Float>, state_im: SendPtr<Float>, chunk: usize
     }
 }
 
-fn y_apply(state: &mut State, target: usize) {
+pub(crate) fn y_apply(state: &mut State, target: usize) {
     let end = state.len() >> 1;
     let chunks = end >> target;
 
@@ -678,6 +678,28 @@ fn rx_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     }
 }
 
+fn rx_mc_apply(state: &mut State, mask: u64, target: usize, angle: Float) {
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
+    let theta = angle * 0.5;
+    let ct = Float::cos(theta);
+    let nst = -Float::sin(theta);
+
+    let mut i = 0;
+    let dist = 1 << target;
+
+    while i < state.len() {
+        if (i as u64 & mask) == mask {
+            let s0 = i;
+            let s1 = i + dist;
+            rx_apply_target(state_re, state_im, s0, s1, ct, nst);
+            i += dist;
+        }
+        i += 1;
+    }
+}
+
 fn p_proc_chunk(state: &mut State, chunk: usize, target: usize, cos: Float, sin: Float) {
     let dist = 1 << target;
     let base = (2 * chunk) << target;
@@ -761,6 +783,24 @@ fn p_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     }
 }
 
+fn p_mc_apply(state: &mut State, mask: u64, target: usize, theta: Float) {
+    let (sin, cos) = Float::sin_cos(theta);
+    let mut i = 0;
+    let dist = 1 << target;
+
+    while i < state.len() {
+        if (i as u64 & mask) == mask {
+            let s1 = i + dist;
+            let z_re = state.reals[s1];
+            let z_im = state.imags[s1];
+            state.reals[s1] = z_re.mul_add(cos, -z_im * sin);
+            state.imags[s1] = z_im.mul_add(cos, z_re * sin);
+            i += dist;
+        }
+        i += 1;
+    }
+}
+
 fn rz_apply_strategy1(state: &mut State, target: usize, diag_matrix: &[Amplitude; 2]) {
     let chunk_size = 1 << target;
 
@@ -836,7 +876,7 @@ fn z_proc_chunk_par(
     }
 }
 
-fn z_apply(state: &mut State, target: usize) {
+pub(crate) fn z_apply(state: &mut State, target: usize) {
     // NOTE: chunks == end >> target, where end == state.len() >> 1
     let chunks = state.len() >> (target + 1);
 
@@ -968,6 +1008,28 @@ fn ry_c_apply_strategy3(state: &mut State, control: usize, target: usize, angle:
 
 fn ry_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
     ry_c_apply_strategy3(state, control, target, angle);
+}
+
+fn ry_mc_apply(state: &mut State, mask: u64, target: usize, angle: Float) {
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
+    let theta = angle * 0.5;
+    let ct = Float::cos(theta);
+    let nst = -Float::sin(theta);
+
+    let mut i = 0;
+    let dist = 1 << target;
+
+    while i < state.len() {
+        if (i as u64 & mask) == mask {
+            let s0 = i;
+            let s1 = i + dist;
+            rx_apply_target(state_re, state_im, s0, s1, ct, nst);
+            i += dist;
+        }
+        i += 1;
+    }
 }
 
 fn u_apply_target(

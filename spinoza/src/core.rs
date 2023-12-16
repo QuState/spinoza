@@ -8,7 +8,7 @@ use std::sync::OnceLock;
 
 use crate::{
     config::Config,
-    gates::{apply, c_apply, Gate},
+    gates::{apply, c_apply, x_apply, y_apply, z_apply, Gate},
     math::{modulus, pow2f, Float, PI},
 };
 
@@ -190,9 +190,83 @@ pub fn iqft(state: &mut State, targets: &[usize]) {
     }
 }
 
+// fn apply_bit_flip(prob: Float, target: usize) {
+//     todo!()
+// }
+
+/// Compute the expectation value of a qubit measurement.
+pub fn qubit_expectation_value(state: &State, target: usize) -> Float {
+    let chunk_size = 1 << (target + 1);
+    let dist = 1 << target;
+
+    let prob0 = state
+        .reals
+        .par_chunks_exact(chunk_size)
+        .zip_eq(state.imags.par_chunks_exact(chunk_size))
+        .map(|(reals_chunk, imags_chunk)| {
+            let (reals_s0, _reals_s1) = reals_chunk.split_at(dist);
+            let (imags_s0, _imags_s1) = imags_chunk.split_at(dist);
+
+            reals_s0
+                .par_iter()
+                .zip_eq(imags_s0.par_iter())
+                .with_min_len(1 << 16)
+                .map(|(re_s0, im_s0)| re_s0.powi(2) + im_s0.powi(2))
+                .sum::<Float>()
+        })
+        .sum::<Float>();
+
+    // p0 - p1 == p0 - (1 - p0) == p0 - 1 + p0 == 2p0 - 1
+    2.0 * prob0 - 1.0
+}
+
+/// Compute the expectation value of certain observables (either X, Y, or Z) in the given state.
+pub fn xyz_expectation_value(observable: char, state: &State, targets: &[usize]) -> Vec<Float> {
+    let mut working_state = state.clone();
+    let mut values = Vec::with_capacity(targets.len());
+
+    for target in targets.iter() {
+        if observable == 'z' {
+            z_apply(&mut working_state, *target);
+        } else if observable == 'y' {
+            y_apply(&mut working_state, *target);
+        } else if observable == 'x' {
+            x_apply(&mut working_state, *target);
+        } else {
+            panic!("observable {observable} not supported");
+        }
+        // v = O * psi
+        // <psi | O | psi>
+
+        // <psi | v >
+        // (a + ib) * (c + id) = a * c + ibc + iad - bd = ac - bd + i(bc + ad)
+
+        let k_re = (
+            &state.reals,
+            &state.imags,
+            &working_state.reals,
+            &working_state.imags,
+        )
+            .into_par_iter()
+            .map(|(s_re, s_im, v_re, v_im)| {
+                let a = *s_re;
+                let b = *s_im;
+                let c = v_re;
+                let d = v_im;
+                a * c + b * d
+            })
+            .sum();
+
+        values.push(k_re);
+        working_state = state.clone();
+    }
+    values
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::assert_float_closeness;
 
     #[test]
     fn encoded_integers() {
@@ -214,5 +288,29 @@ mod tests {
             let count = *histogram.get(&i).unwrap();
             assert_eq!(count, state.len());
         }
+    }
+
+    #[test]
+    fn xyz_exp_val() {
+        let mut state = State::new(1);
+
+        apply(Gate::RX(0.54), &mut state, 0);
+        apply(Gate::RY(0.12), &mut state, 0);
+        let exp_vals = xyz_expectation_value('z', &state, &[0]);
+
+        assert_float_closeness(exp_vals[0], 0.8515405859048367, 0.0001);
+    }
+
+    #[test]
+    fn qubit_exp_val() {
+        let mut state = State::new(1);
+        let target = 0;
+
+        apply(Gate::RX(0.54), &mut state, target);
+        apply(Gate::RY(0.12), &mut state, target);
+        let exp_vals = xyz_expectation_value('z', &state, &[target]);
+        let qubit_exp_val = qubit_expectation_value(&state, target);
+
+        assert_float_closeness(qubit_exp_val, exp_vals[0], 0.0001);
     }
 }

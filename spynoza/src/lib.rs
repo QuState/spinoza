@@ -10,7 +10,10 @@ use spinoza::{
         Controls, QuantumCircuit as QuantumCircuitRS, QuantumRegister as QuantumRegisterRS,
         QuantumTransformation as QuantumTransformationRS,
     },
-    core::{qubit_expectation_value as qubit_expval, reservoir_sampling, State},
+    core::{
+        qubit_expectation_value as qubit_expval, reservoir_sampling,
+        xyz_expectation_value as xyz_expval, State,
+    },
     gates::Gate,
     math::{Amplitude, Float},
     utils::to_table,
@@ -361,18 +364,10 @@ impl QuantumCircuit {
     }
 }
 
-// #[pyfunction]
-// pub fn expval(gate: &str, state: &PyState, targets: Vec<usize>) {
-//     if gate == "x" {
-//         todo!();
-//     } else if gate == "y" {
-//         todo!();
-//     } else if gate == "z" {
-//         todo!()
-//     } else {
-//         panic!("{gate} gate not supported");
-//     }
-// }
+#[pyfunction]
+pub fn xyz_expectation_value(observable: char, state: &PyState, targets: Vec<usize>) -> Vec<Float> {
+    xyz_expval(observable, &state.data, &targets)
+}
 
 #[pyfunction]
 pub fn qubit_expectation_value(state: &PyState, target: usize) -> Float {
@@ -399,6 +394,8 @@ fn spynoza(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(get_samples))?;
     m.add_wrapped(wrap_pyfunction!(show_table))?;
     m.add_wrapped(wrap_pyfunction!(run))?;
+    m.add_wrapped(wrap_pyfunction!(qubit_expectation_value))?;
+    m.add_wrapped(wrap_pyfunction!(xyz_expectation_value))?;
     m.add_class::<PyState>()?;
     m.add_class::<QuantumRegister>()?;
     m.add_class::<QuantumCircuit>()?;

@@ -204,12 +204,10 @@ pub fn qubit_expectation_value(state: &State, target: usize) -> Float {
         .par_chunks_exact(chunk_size)
         .zip_eq(state.imags.par_chunks_exact(chunk_size))
         .map(|(reals_chunk, imags_chunk)| {
-            let (reals_s0, _reals_s1) = reals_chunk.split_at(dist);
-            let (imags_s0, _imags_s1) = imags_chunk.split_at(dist);
-
-            reals_s0
+            reals_chunk
                 .par_iter()
-                .zip_eq(imags_s0.par_iter())
+                .take(dist)
+                .zip_eq(imags_chunk.par_iter().take(dist))
                 .with_min_len(1 << 16)
                 .map(|(re_s0, im_s0)| re_s0.powi(2) + im_s0.powi(2))
                 .sum::<Float>()
@@ -222,6 +220,10 @@ pub fn qubit_expectation_value(state: &State, target: usize) -> Float {
 
 /// Compute the expectation value of certain observables (either X, Y, or Z) in the given state.
 pub fn xyz_expectation_value(observable: char, state: &State, targets: &[usize]) -> Vec<Float> {
+    if !"xyz".contains(observable) {
+        panic!("observable {observable} not supported");
+    }
+
     let mut working_state = state.clone();
     let mut values = Vec::with_capacity(targets.len());
 
@@ -230,17 +232,15 @@ pub fn xyz_expectation_value(observable: char, state: &State, targets: &[usize])
             z_apply(&mut working_state, *target);
         } else if observable == 'y' {
             y_apply(&mut working_state, *target);
-        } else if observable == 'x' {
-            x_apply(&mut working_state, *target);
         } else {
-            panic!("observable {observable} not supported");
+            x_apply(&mut working_state, *target);
         }
+
         // v = O * psi
         // <psi | O | psi>
 
         // <psi | v >
         // (a + ib) * (c + id) = a * c + ibc + iad - bd = ac - bd + i(bc + ad)
-
         let k_re = (
             &state.reals,
             &state.imags,
@@ -297,8 +297,32 @@ mod tests {
         apply(Gate::RX(0.54), &mut state, 0);
         apply(Gate::RY(0.12), &mut state, 0);
         let exp_vals = xyz_expectation_value('z', &state, &[0]);
-
         assert_float_closeness(exp_vals[0], 0.8515405859048367, 0.0001);
+    }
+
+    #[test]
+    #[should_panic]
+    fn xyz_exp_val_bad_observable() {
+        let mut state = State::new(1);
+        apply(Gate::RX(0.54), &mut state, 0);
+        apply(Gate::RY(0.12), &mut state, 0);
+        xyz_expectation_value('a', &state, &[0]);
+    }
+
+    #[test]
+    fn xyz_exp_val_x_as_observable() {
+        let mut state = State::new(1);
+        apply(Gate::RX(0.54), &mut state, 0);
+        apply(Gate::RY(0.12), &mut state, 0);
+        xyz_expectation_value('x', &state, &[0]);
+    }
+
+    #[test]
+    fn xyz_exp_val_y_as_observable() {
+        let mut state = State::new(1);
+        apply(Gate::RX(0.54), &mut state, 0);
+        apply(Gate::RY(0.12), &mut state, 0);
+        xyz_expectation_value('y', &state, &[0]);
     }
 
     #[test]

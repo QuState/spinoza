@@ -18,9 +18,13 @@ fn main() {
     apply(Gate::RX(0.54), &mut state, target);
     apply(Gate::RY(0.12), &mut state, target);
 
-    let exp_vals = xyz_expectation_value('z', &state, &[target]);
+    let targets = (0..n).collect::<Vec<usize>>();
+    let exp_vals = xyz_expectation_value('z', &state, &targets);
     println!("expectation values: {:?}", exp_vals);
 
-    let exp_val = qubit_expectation_value(&state, target);
-    println!("{exp_val}");
+    let exp_vals: Vec<_> = (0..n).map(|t| qubit_expectation_value(&state, t)).collect();
+    println!(
+        "expectation values using `qubit_expectation_value`: {:?}",
+        exp_vals
+    );
 }

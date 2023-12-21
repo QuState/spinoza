@@ -4,7 +4,6 @@ use std::collections::HashMap;
 
 use pyo3::prelude::*;
 use pyo3::types::PyTuple;
-
 use spinoza::{
     circuit::{
         Controls, QuantumCircuit as QuantumCircuitRS, QuantumRegister as QuantumRegisterRS,
@@ -199,18 +198,20 @@ impl QuantumCircuit {
     }
 
     #[getter(register_sizes)]
-    pub fn get_register_sizes(&self) -> Vec<usize> {
+    pub fn register_sizes(&self) -> Vec<usize> {
         self.qc.quantum_registers_info.clone()
     }
 
-    pub fn get_statevector(&self) -> PyResult<PyState> {
+    #[getter(state_vector)]
+    pub fn state_vector(&self) -> PyResult<PyState> {
         let temp = PyState {
             data: self.qc.state.clone(),
         };
         Ok(temp)
     }
 
-    pub fn get_transformations(&self) -> Vec<PyQuantumTransformation> {
+    #[getter(transformations)]
+    pub fn transformations(&self) -> Vec<PyQuantumTransformation> {
         self.qc
             .transformations
             .iter()
@@ -269,9 +270,9 @@ impl QuantumCircuit {
     }
 
     // Controlled gates
-    // pub fn ch(&mut self, control: usize, target: usize) {
-    //     self.qc.ch(control, target)
-    // }
+    pub fn ch(&mut self, control: usize, target: usize) {
+        self.qc.ch(control, target)
+    }
 
     #[inline]
     pub fn cx(&mut self, control: usize, target: usize) {
@@ -304,9 +305,9 @@ impl QuantumCircuit {
     }
 
     // #[inline]
-    // pub fn crz(&mut self, angle: Float, control: usize, target: usize) {
-    //     self.qc.crz(angle, control, target)
-    // }
+    pub fn crz(&mut self, angle: Float, control: usize, target: usize) {
+        self.qc.crz(angle, control, target)
+    }
 
     // Special gates
     #[inline]
@@ -364,6 +365,11 @@ impl QuantumCircuit {
     }
 }
 
+// #[pyfunction]
+// pub fn combined_probability(state: &PyState, qubits: Vec<usize>) -> Float {
+//     comb_prob(&state.data, &qubits)
+// }
+
 #[pyfunction]
 pub fn xyz_expectation_value(observable: char, state: &PyState, targets: Vec<usize>) -> Vec<Float> {
     xyz_expval(observable, &state.data, &targets)
@@ -386,7 +392,7 @@ pub fn get_samples(
 #[pyfunction]
 pub fn run(qc: &mut QuantumCircuit) -> PyResult<PyState> {
     qc.execute();
-    qc.get_statevector()
+    qc.state_vector()
 }
 
 #[pymodule]
@@ -394,6 +400,7 @@ fn spynoza(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(get_samples))?;
     m.add_wrapped(wrap_pyfunction!(show_table))?;
     m.add_wrapped(wrap_pyfunction!(run))?;
+    // m.add_wrapped(wrap_pyfunction!(combined_probability))?;
     m.add_wrapped(wrap_pyfunction!(qubit_expectation_value))?;
     m.add_wrapped(wrap_pyfunction!(xyz_expectation_value))?;
     m.add_class::<PyState>()?;

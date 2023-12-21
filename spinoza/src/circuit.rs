@@ -291,6 +291,17 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add a controlled Hadamard gate for a given target qubit and a given control qubit to the list of
+    /// QuantumTransformations
+    #[inline]
+    pub fn ch(&mut self, control: usize, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::H,
+            target,
+            controls: Controls::Single(control),
+        });
+    }
+
     /// Add Ry gate for a given target qubit to the list of QuantumTransformations
     #[inline]
     pub fn ry(&mut self, angle: Float, target: usize) {
@@ -372,6 +383,17 @@ impl QuantumCircuit {
             gate: Gate::RZ(angle),
             target,
             controls: Controls::None,
+        });
+    }
+
+    /// Add the Controlled Rz gate for a given target qubit and a given control qubit to the list of
+    /// QuantumTransformations
+    #[inline]
+    pub fn crz(&mut self, angle: Float, control: usize, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::RZ(angle),
+            target,
+            controls: Controls::Single(control),
         });
     }
 

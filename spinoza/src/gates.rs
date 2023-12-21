@@ -204,11 +204,13 @@ pub fn apply(gate: Gate, state: &mut State, target: usize) {
 /// Single Control, Single Target
 pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
     match gate {
+        Gate::H => h_c_apply(state, control, target),
         Gate::X => x_c_apply(state, control, target),
         Gate::Y => y_c_apply(state, control, target),
         Gate::P(theta) => p_c_apply(state, control, target, theta),
         Gate::RX(theta) => rx_c_apply(state, control, target, theta),
         Gate::RY(theta) => ry_c_apply(state, control, target, theta),
+        Gate::RZ(theta) => rz_c_apply(state, control, target, theta),
         _ => todo!(),
     }
 }
@@ -550,6 +552,67 @@ fn h_apply(state: &mut State, target: usize) {
     }
 }
 
+fn h_c_apply(state: &mut State, control: usize, target: usize) {
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
+    let end = state.len() >> 2;
+    let dist = 1 << target;
+    let marks = (target.min(control), target.max(control));
+
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
+        (0..end).for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let s0 = s1 - dist;
+            let (a, b, c, d) = unsafe {
+                let a = *state.reals.get_unchecked(s0);
+                let b = *state.imags.get_unchecked(s0);
+                let c = *state.reals.get_unchecked(s1);
+                let d = *state.imags.get_unchecked(s1);
+                (a, b, c, d)
+            };
+
+            let a1 = SQRT_ONE_HALF * a;
+            let b1 = SQRT_ONE_HALF * b;
+            let c1 = SQRT_ONE_HALF * c;
+            let d1 = SQRT_ONE_HALF * d;
+
+            unsafe {
+                *state.reals.get_unchecked_mut(s0) = a1 + c1;
+                *state.imags.get_unchecked_mut(s0) = b1 + d1;
+                *state.reals.get_unchecked_mut(s1) = a1 - c1;
+                *state.imags.get_unchecked_mut(s1) = b1 - d1;
+            }
+        });
+    } else {
+        (0..end).into_par_iter().for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let s0 = s1 - dist;
+            let (a, b, c, d) = unsafe {
+                let a = *state_re.get().add(s0);
+                let b = *state_im.get().add(s0);
+                let c = *state_re.get().add(s1);
+                let d = *state_im.get().add(s1);
+                (a, b, c, d)
+            };
+
+            let a1 = SQRT_ONE_HALF * a;
+            let b1 = SQRT_ONE_HALF * b;
+            let c1 = SQRT_ONE_HALF * c;
+            let d1 = SQRT_ONE_HALF * d;
+
+            unsafe {
+                *state_re.get().add(s0) = a1 + c1;
+                *state_im.get().add(s0) = b1 + d1;
+                *state_re.get().add(s1) = a1 - c1;
+                *state_im.get().add(s1) = b1 - d1;
+            }
+        });
+    }
+}
+
 fn rx_apply_target_0(
     state_re: SendPtr<Float>,
     state_im: SendPtr<Float>,
@@ -847,6 +910,76 @@ fn rz_apply(state: &mut State, target: usize, angle: Float) {
     let d1 = Amplitude { re: c, im: s };
     let diag_matrix = [d0, d1];
     rz_apply_strategy1(state, target, &diag_matrix);
+}
+
+fn rz_c_apply(state: &mut State, control: usize, target: usize, angle: Float) {
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
+    let theta = angle * 0.5;
+    let (s, c) = Float::sin_cos(theta);
+    let d0 = Amplitude { re: c, im: -s };
+    let d1 = Amplitude { re: c, im: s };
+    let diag_matrix = [d0, d1];
+    let end = state.len() >> 2;
+
+    let dist = 1 << target;
+    let marks = (target.min(control), target.max(control));
+
+    if Config::global().threads < 2 || state.n < LOW_QUBIT_THRESHOLD {
+        (0..end).for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let s0 = s1 - dist;
+
+            let m = diag_matrix[0];
+            unsafe {
+                let a = state_re.get().add(s0);
+                let b = state_im.get().add(s0);
+                let c = *a;
+                let d = *b;
+
+                *a = c.mul_add(m.re, -d * m.im);
+                *b = c.mul_add(m.im, d * m.re);
+            }
+            let m = diag_matrix[1];
+            unsafe {
+                let a = state_re.get().add(s1);
+                let b = state_im.get().add(s1);
+                let c = *a;
+                let d = *b;
+
+                *a = c.mul_add(m.re, -d * m.im);
+                *b = c.mul_add(m.im, d * m.re);
+            }
+        });
+    } else {
+        (0..end).into_par_iter().for_each(|i| {
+            let x = i + (1 << (marks.1 - 1)) + ((i >> (marks.1 - 1)) << (marks.1 - 1));
+            let s1 = x + (1 << marks.0) + ((x >> marks.0) << marks.0);
+            let s0 = s1 - dist;
+            let m = diag_matrix[0];
+            unsafe {
+                let a = state_re.get().add(s0);
+                let b = state_im.get().add(s0);
+                let c = *a;
+                let d = *b;
+
+                *a = c.mul_add(m.re, -d * m.im);
+                *b = c.mul_add(m.im, d * m.re);
+            }
+            let m = diag_matrix[1];
+            unsafe {
+                let a = state_re.get().add(s1);
+                let b = state_im.get().add(s1);
+                let c = *a;
+                let d = *b;
+
+                *a = c.mul_add(m.re, -d * m.im);
+                *b = c.mul_add(m.im, d * m.re);
+            }
+        });
+    }
 }
 
 fn z_proc_chunk(state: &mut State, chunk: usize, target: usize) {

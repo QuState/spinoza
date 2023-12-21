@@ -69,5 +69,5 @@ def val_encoding(n, v):
 if __name__ == "__main__":
     circuit = val_encoding(3, 4.7)
     circuit.execute()
-    state = circuit.get_statevector()
+    state = circuit.state_vector()
     print(show_table(state))

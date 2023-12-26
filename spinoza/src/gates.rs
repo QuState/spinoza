@@ -1976,4 +1976,78 @@ mod tests {
         assert_eq!(result_reals2, vec![3.0, 2.0]);
         assert_eq!(result_imags2, vec![5.0, 4.0]);
     }
+
+    #[test]
+    fn ch() {
+        let n = 3;
+        let mut state = State::new(n);
+
+        for t in 0..n {
+            apply(Gate::H, &mut state, t);
+        }
+
+        state
+            .reals
+            .iter()
+            .zip(state.imags.iter())
+            .for_each(|(z_re, z_im)| {
+                assert_float_closeness(*z_re, 0.353553391, 0.0001);
+                assert_float_closeness(*z_im, 0.0, 0.0001);
+            });
+
+        c_apply(Gate::H, &mut state, 0, 1);
+
+        let mut i = 0;
+
+        while i < state.len() - 3 {
+            assert_float_closeness(state.reals[i], 0.353553391, 0.0001);
+            assert_float_closeness(state.reals[i + 1], 0.5, 0.0001);
+            assert_float_closeness(state.reals[i + 2], 0.353553391, 0.0001);
+            assert_float_closeness(state.reals[i + 3], 0.0, 0.0001);
+
+            assert_float_closeness(state.imags[i], 0.0, 0.0001);
+            assert_float_closeness(state.imags[i + 1], 0.0, 0.0001);
+            assert_float_closeness(state.imags[i + 2], 0.0, 0.0001);
+            assert_float_closeness(state.imags[i + 3], 0.0, 0.0001);
+            i += 4;
+        }
+    }
+
+    #[test]
+    fn crz() {
+        let n = 3;
+        let mut state = State::new(n);
+
+        for t in 0..n {
+            apply(Gate::H, &mut state, t);
+        }
+
+        state
+            .reals
+            .iter()
+            .zip(state.imags.iter())
+            .for_each(|(z_re, z_im)| {
+                assert_float_closeness(*z_re, 0.353553391, 0.0001);
+                assert_float_closeness(*z_im, 0.0, 0.0001);
+            });
+
+        c_apply(Gate::RZ(PI / 2.0), &mut state, 0, 1);
+
+        let mut i = 0;
+
+        while i < state.len() - 3 {
+            assert_float_closeness(state.reals[i], 0.353553391, 0.0001);
+            assert_float_closeness(state.imags[i], 0.0, 0.0001);
+
+            assert_float_closeness(state.reals[i + 1], 0.25, 0.0001);
+            assert_float_closeness(state.imags[i + 1], -0.25, 0.0001);
+
+            assert_float_closeness(state.reals[i + 2], 0.353553391, 0.0001);
+            assert_float_closeness(state.imags[i + 2], 0.0, 0.0001);
+
+            assert_float_closeness(state.reals[i + 3], 0.25, 0.0001);
+            assert_float_closeness(state.imags[i + 3], 0.25, 0.0001);
+            i += 4;
+        }
+    }
 }

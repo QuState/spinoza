@@ -649,6 +649,50 @@ mod tests {
     }
 
     #[test]
+    fn ch() {
+        let n = 3;
+        let mut state = State::new(n);
+
+        for target in 0..n {
+            apply(Gate::H, &mut state, target);
+        }
+        c_apply(Gate::H, &mut state, 0, 1);
+
+        let mut q = QuantumRegister::new(n);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
+        for target in 0..n {
+            qc.h(target);
+        }
+        qc.ch(0, 1);
+        qc.execute();
+
+        assert_eq!(qc.state.reals, state.reals);
+        assert_eq!(qc.state.imags, state.imags);
+    }
+
+    #[test]
+    fn crz() {
+        let n = 3;
+        let mut state = State::new(n);
+
+        for target in 0..n {
+            apply(Gate::H, &mut state, target);
+        }
+        c_apply(Gate::RZ(PI / 2.0), &mut state, 0, 1);
+
+        let mut q = QuantumRegister::new(n);
+        let mut qc = QuantumCircuit::new(&mut [&mut q]);
+        for target in 0..n {
+            qc.h(target);
+        }
+        qc.crz(PI / 2.0, 0, 1);
+        qc.execute();
+
+        assert_eq!(qc.state.reals, state.reals);
+        assert_eq!(qc.state.imags, state.imags);
+    }
+
+    #[test]
     fn cy() {
         let n = 3;
         let mut q = QuantumRegister::new(n);

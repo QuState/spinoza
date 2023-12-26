@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 0.5.0
+
+### New features
+
+- Add the controlled Hadamard gate.
+- Add the controlled Rz gate.
+- Add functions to compute expectation value:
+  - `xyz_expectation_value` can take any of the operators, `X, Y, Z`, and
+  return the expectation value.
+  - `qubit_expectation_value` is a special case that offers better performance when
+  computing the expectation value of `Z` in the state.
+
 ## 0.4.0
 
 - The default number of threads is now determined using

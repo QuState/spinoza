@@ -248,12 +248,12 @@ mod tests {
     fn test_u() {
         let n = 2;
         let state = State::new(n);
-        let u = Unitary::from_single_qubit_gate(&state, Gate::U((1.0, 2.0, 3.0)), 0);
+        let u = Unitary::from_single_qubit_gate(&state, Gate::U(1.0, 2.0, 3.0), 0);
 
         let s = apply_unitary(&state, &u);
 
         let mut s1 = State::new(n);
-        apply(Gate::U((1.0, 2.0, 3.0)), &mut s1, 0);
+        apply(Gate::U(1.0, 2.0, 3.0), &mut s1, 0);
 
         assert_eq!(s.n, s1.n);
         assert_eq!(s.reals, s1.reals);

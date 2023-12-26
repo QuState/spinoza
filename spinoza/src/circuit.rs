@@ -223,7 +223,7 @@ impl QuantumCircuit {
     #[inline]
     pub fn swap(&mut self, t0: usize, t1: usize) {
         self.add(QuantumTransformation {
-            gate: Gate::SWAP((t0, t1)),
+            gate: Gate::SWAP(t0, t1),
             target: 0,
             controls: Controls::None,
         });
@@ -401,7 +401,21 @@ impl QuantumCircuit {
     #[inline]
     pub fn u(&mut self, theta: Float, phi: Float, lambda: Float, target: usize) {
         self.add(QuantumTransformation {
-            gate: Gate::U((theta, phi, lambda)),
+            gate: Gate::U(theta, phi, lambda),
+            target,
+            controls: Controls::None,
+        });
+    }
+
+    /// Add the bit flip noise gate for a given target qubit, given a probability
+    // TODO(saveliy) this can potentially be optimized by checking the probability here,
+    // and then add the X gate, if it evaluates the true. The advantage is for the case
+    // where the overall number of `QuantumTransformation`s is large, and/or the
+    // probability of bitflip bit is trivial.
+    #[inline]
+    pub fn bit_flip_noise(&mut self, prob: Float, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::BitFlipNoise(prob),
             target,
             controls: Controls::None,
         });
@@ -778,7 +792,7 @@ mod tests {
         apply(Gate::RX(PI), &mut state, 5);
         apply(Gate::RY(PI), &mut state, 6);
         apply(Gate::RZ(PI), &mut state, 7);
-        apply(Gate::U((PI, PI, PI)), &mut state, 8);
+        apply(Gate::U(PI, PI, PI), &mut state, 8);
         c_apply(Gate::Y, &mut state, 9, 10);
         c_apply(Gate::RX(PI), &mut state, 11, 12);
         c_apply(Gate::RY(PI), &mut state, 13, 14);
@@ -1163,5 +1177,45 @@ mod tests {
                 }
             });
         println!("{}", to_table(&qc.state));
+    }
+
+    #[test]
+    fn bit_flip_noise() {
+        const N: usize = 1;
+        let state = gen_random_state(N);
+
+        let mut qc1 = QuantumCircuit {
+            state: state.clone(),
+            transformations: Vec::new(),
+            qubit_tracker: QubitTracker::new(),
+            quantum_registers_info: Vec::new(),
+        };
+
+        let mut qc2 = QuantumCircuit {
+            state,
+            transformations: Vec::new(),
+            qubit_tracker: QubitTracker::new(),
+            quantum_registers_info: Vec::new(),
+        };
+
+        // Sanity checks
+        assert_eq!(qc1.state.reals, qc2.state.reals);
+        assert_eq!(qc1.state.imags, qc2.state.imags);
+
+        for target in 0..N {
+            qc2.bit_flip_noise(0.0, target);
+        }
+
+        // BitFlipNoise with prob==0.0 should not change anything
+        assert_eq!(qc1.state.reals, qc2.state.reals);
+        assert_eq!(qc1.state.imags, qc2.state.imags);
+
+        // BitFlipNoise with prob==1.0 should be equivalent to applying the X gate
+        for target in 0..N {
+            qc1.x(target);
+            qc2.bit_flip_noise(1.0, target);
+        }
+        assert_eq!(qc1.state.reals, qc2.state.reals);
+        assert_eq!(qc1.state.imags, qc2.state.imags);
     }
 }

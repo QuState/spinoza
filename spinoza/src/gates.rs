@@ -1,4 +1,5 @@
 //! Abstractions for quantum logic gates
+use rand::Rng;
 use rayon::prelude::*;
 use std::collections::HashSet;
 
@@ -63,24 +64,26 @@ pub enum Gate {
     /// Rz gate for rotation about the z-axis. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Rotation_operator_gates>
     RZ(Float),
     /// Swap gate swaps two qubits. See <https://en.wikipedia.org/wiki/Quantum_logic_gate#Swap_gate>
-    SWAP((usize, usize)),
+    SWAP(usize, usize),
     /// General single qubit rotation. See <https://en.wikipedia.org/wiki/List_of_quantum_logic_gates#Other_named_gates>
-    U((Float, Float, Float)),
+    U(Float, Float, Float),
     /// A Unitary matrix. See <https://mathworld.wolfram.com/UnitaryMatrix.html>
     Unitary(Unitary),
+    /// A gate to simulate a bit flip based on the provided probability.
+    BitFlipNoise(Float),
 }
 
 impl Gate {
     /// Return the inverted gate
     pub fn inverse(self) -> Self {
         match self {
-            Self::H | Self::X | Self::Y | Self::Z | Self::SWAP((_, _)) => self,
+            Self::H | Self::X | Self::Y | Self::Z | Self::SWAP(_, _) => self,
             Self::P(theta) => Self::P(-theta),
             Self::RX(theta) => Self::RX(-theta),
             Self::RY(theta) => Self::RY(-theta),
             Self::RZ(theta) => Self::RZ(-theta),
-            Self::U((theta, phi, lambda)) => Self::U((-theta, -lambda, -phi)),
-            Self::M => unimplemented!(),
+            Self::U(theta, phi, lambda) => Self::U(-theta, -lambda, -phi),
+            Self::M | Self::BitFlipNoise(_) => unimplemented!(),
             Self::Unitary(_) => todo!(),
         }
     }
@@ -158,7 +161,7 @@ impl Gate {
                     },
                 ]
             }
-            Self::U((theta, phi, lambda)) => {
+            Self::U(theta, phi, lambda) => {
                 let theta = theta / 2.0;
                 [
                     Amplitude {
@@ -195,8 +198,11 @@ pub fn apply(gate: Gate, state: &mut State, target: usize) {
         Gate::RX(theta) => rx_apply(state, target, theta),
         Gate::RY(theta) => ry_apply(state, target, theta),
         Gate::RZ(theta) => rz_apply(state, target, theta),
-        Gate::SWAP((t0, t1)) => swap_apply(state, t0, t1),
-        Gate::U((theta, phi, lambda)) => u_apply(state, target, theta, phi, lambda),
+        Gate::SWAP(t0, t1) => swap_apply(state, t0, t1),
+        Gate::U(theta, phi, lambda) => u_apply(state, target, theta, phi, lambda),
+        Gate::BitFlipNoise(prob) => {
+            bit_flip_noise_apply(state, prob, target);
+        }
         _ => unimplemented!(),
     }
 }
@@ -1256,6 +1262,17 @@ fn u_apply(state: &mut State, target: usize, theta: Float, phi: Float, lambda: F
     }
 }
 
+fn bit_flip_noise_apply(state: &mut State, prob: Float, target: usize) -> bool {
+    let mut rng = rand::thread_rng();
+    let epsilon: Float = rng.gen();
+
+    if epsilon <= prob {
+        x_apply(state, target);
+        return true;
+    }
+    false
+}
+
 fn swap_apply(state: &mut State, t0: usize, t1: usize) {
     assert!(usize::from(state.n) > t0 && usize::from(state.n) > t1);
 
@@ -1698,7 +1715,7 @@ mod tests {
         let mut state = State::new(n);
 
         for i in 0..n {
-            apply(Gate::U((1.0, 1.0, 1.0)), &mut state, i);
+            apply(Gate::U(1.0, 1.0, 1.0), &mut state, i);
         }
 
         assert_float_closeness(state.reals[0], 0.6758712218347053, 1e-10);
@@ -1734,7 +1751,7 @@ mod tests {
         let theta = 2.0;
         let phi = 3.0;
 
-        apply(Gate::U((theta, phi, lambda)), &mut state, 0);
+        apply(Gate::U(theta, phi, lambda), &mut state, 0);
         assert_float_closeness(state.reals[0], 0.5403023058681398, 1e-10);
         assert_float_closeness(state.imags[0], 0.0, 1e-10);
 
@@ -1744,7 +1761,7 @@ mod tests {
         // Check other base vector
         let mut state = State::new(1);
         apply(Gate::X, &mut state, 0);
-        apply(Gate::U((theta, phi, lambda)), &mut state, 0);
+        apply(Gate::U(theta, phi, lambda), &mut state, 0);
 
         assert_float_closeness(state.reals[0], -0.4546487134128409, 1e-10);
         assert_float_closeness(state.imags[0], -0.7080734182735712, 1e-10);
@@ -1914,8 +1931,8 @@ mod tests {
 
     #[test]
     fn u_inverse() {
-        let u = Gate::U((1.0, 2.0, 3.0)).to_matrix();
-        let u_inv = Gate::U((1.0, 2.0, 3.0)).inverse().to_matrix();
+        let u = Gate::U(1.0, 2.0, 3.0).to_matrix();
+        let u_inv = Gate::U(1.0, 2.0, 3.0).inverse().to_matrix();
 
         let identity = mat_mul_2x2(u, u_inv);
         assert_float_closeness(identity[0].re, 1.0, 0.001);
@@ -1938,8 +1955,8 @@ mod tests {
     #[test]
     #[should_panic]
     fn swap_inverse() {
-        let _swap = Gate::SWAP((0, 1));
-        let _swap_inv = Gate::SWAP((0, 1)).inverse().to_matrix();
+        let _swap = Gate::SWAP(0, 1);
+        let _swap_inv = Gate::SWAP(0, 1).inverse().to_matrix();
     }
 
     #[test]
@@ -2049,5 +2066,29 @@ mod tests {
             assert_float_closeness(state.imags[i + 3], 0.25, 0.0001);
             i += 4;
         }
+    }
+
+    #[test]
+    fn bit_flip_noise() {
+        const N: usize = 1;
+        let state0 = gen_random_state(N);
+        let mut state1 = state0.clone();
+
+        apply(Gate::BitFlipNoise(0.0), &mut state1, 0);
+        assert_eq!(
+            state0.reals, state1.reals,
+            "BitFlipNoise with prob=0.0 should have no effect"
+        );
+        assert_eq!(
+            state0.imags, state1.imags,
+            "BitFlipNoise with prob=0.0 should have no effect"
+        );
+
+        // BitFlipNoise with prob=1.0 is equivalent to just applying the X gate to the provided target qubit
+        apply(Gate::BitFlipNoise(1.0), &mut state1, 0);
+        assert_float_closeness(state1.reals[0], state0.reals[1], 0.00001);
+        assert_float_closeness(state1.reals[1], state0.reals[0], 0.00001);
+        assert_float_closeness(state1.imags[0], state0.imags[1], 0.00001);
+        assert_float_closeness(state1.imags[1], state0.imags[0], 0.00001);
     }
 }

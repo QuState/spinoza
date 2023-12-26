@@ -151,7 +151,7 @@ impl From<QuantumTransformationRS> for PyQuantumTransformation {
             Gate::RX(angle) => ("rx", Some((angle, 0.0, 0.0))),
             Gate::RY(angle) => ("ry", Some((angle, 0.0, 0.0))),
             Gate::RZ(angle) => ("rz", Some((angle, 0.0, 0.0))),
-            Gate::U((a, b, c)) => ("u", Some((a, b, c))),
+            Gate::U(a, b, c) => ("u", Some((a, b, c))),
             _ => todo!(),
         };
 

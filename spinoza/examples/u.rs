@@ -11,7 +11,7 @@ fn u(n: usize, show_results: bool) {
     let mut state = State::new(n);
 
     for i in 0..n {
-        apply(Gate::U((1.0, 2.0, 3.0)), &mut state, i);
+        apply(Gate::U(1.0, 2.0, 3.0), &mut state, i);
     }
 
     let elapsed = now.elapsed().as_micros();

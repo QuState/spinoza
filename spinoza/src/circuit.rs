@@ -201,6 +201,7 @@ impl QuantumCircuit {
         &self.state
     }
 
+    // TODO(saveliy): look into fusing the two loops
     /// Invert this circuit
     pub fn inverse(&mut self) {
         self.transformations.reverse();

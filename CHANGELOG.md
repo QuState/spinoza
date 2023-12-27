@@ -2,6 +2,10 @@
 
 ## 0.5.0
 
+### (Minor) Breaking changes
+*Since Spinoza is pre `v1.0.0`, and under heavy ...*
+
+
 ### New features
 
 - Add the controlled Hadamard gate.

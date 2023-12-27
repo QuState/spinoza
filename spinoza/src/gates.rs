@@ -84,7 +84,10 @@ impl Gate {
             Self::RZ(theta) => Self::RZ(-theta),
             Self::U(theta, phi, lambda) => Self::U(-theta, -lambda, -phi),
             Self::M | Self::BitFlipNoise(_) => unimplemented!(),
-            Self::Unitary(_) => todo!(),
+            Self::Unitary(mut unitary) => {
+                unitary.conj_t();
+                Self::Unitary(unitary)
+            }
         }
     }
 
@@ -1300,6 +1303,7 @@ fn unitary_col_vec_mul(
     let mut reals = Vec::with_capacity(vec_reals.len());
     let mut imags = Vec::with_capacity(vec_imags.len());
 
+    // TODO(saveliy): parallelize this
     unitary
         .reals
         .chunks_exact(chunk_size)
@@ -1944,6 +1948,9 @@ mod tests {
         assert_float_closeness(identity[3].re, 1.0, 0.001);
         assert_float_closeness(identity[3].im, 0.0, 0.001);
     }
+
+    #[test]
+    fn unitary_inverse() {}
 
     #[test]
     #[should_panic]

@@ -345,6 +345,17 @@ impl QuantumCircuit {
         });
     }
 
+    /// Add the Controlled U gate for a given target qubit and a given control qubit to the list of
+    /// QuantumTransformations
+    #[inline]
+    pub fn cu(&mut self, theta: Float, phi: Float, lambda: Float, control: usize, target: usize) {
+        self.add(QuantumTransformation {
+            gate: Gate::U(theta, phi, lambda),
+            target,
+            controls: Controls::Single(control),
+        });
+    }
+
     /// Add the Controlled Y gate for a given target qubit and a given control qubit to the list of
     /// QuantumTransformations
     #[inline]
@@ -1218,5 +1229,23 @@ mod tests {
         }
         assert_eq!(qc1.state.reals, qc2.state.reals);
         assert_eq!(qc1.state.imags, qc2.state.imags);
+    }
+
+    #[test]
+    fn controlled_u() {
+        const N: usize = 3;
+        let mut qr = QuantumRegister::new(N);
+        let mut qc = QuantumCircuit::new(&mut [&mut qr]);
+
+        let (control, target) = (0, 1);
+        qc.cu(1.0, 2.0, 3.0, control, target);
+        qc.execute();
+
+        let mut state = State::new(N);
+        c_apply(Gate::U(1.0, 2.0, 3.0), &mut state, control, target);
+
+        assert_eq!(qc.state.n, state.n);
+        assert_eq!(qc.state.reals, state.reals);
+        assert_eq!(qc.state.imags, state.imags);
     }
 }

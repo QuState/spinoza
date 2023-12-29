@@ -220,6 +220,7 @@ pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
         Gate::RX(theta) => rx_c_apply(state, control, target, theta),
         Gate::RY(theta) => ry_c_apply(state, control, target, theta),
         Gate::RZ(theta) => rz_c_apply(state, control, target, theta),
+        Gate::U(theta, phi, lambda) => u_c_apply(state, theta, phi, lambda, control, target),
         _ => todo!(),
     }
 }
@@ -1265,6 +1266,49 @@ fn u_apply(state: &mut State, target: usize, theta: Float, phi: Float, lambda: F
     }
 }
 
+fn u_c_apply(
+    state: &mut State,
+    theta: Float,
+    phi: Float,
+    lambda: Float,
+    control: usize,
+    target: usize,
+) {
+    let (st, ct) = Float::sin_cos(theta * 0.5);
+    let (sl, cl) = Float::sin_cos(lambda);
+    let (spl, cpl) = Float::sin_cos(phi + lambda);
+    let (sp, cp) = Float::sin_cos(phi);
+
+    let c = Amplitude { re: ct, im: 0.0 };
+    let ncs = Amplitude {
+        re: -cl * st,
+        im: -sl * st,
+    };
+    let es = Amplitude {
+        re: cp * st,
+        im: sp * st,
+    };
+    let ec = Amplitude {
+        re: cpl * ct,
+        im: spl * ct,
+    };
+    let g = [c, ncs, es, ec];
+
+    let state_re = SendPtr(state.reals.as_mut_ptr());
+    let state_im = SendPtr(state.imags.as_mut_ptr());
+
+    let distance = 1 << target;
+    let mask = (1 << control) | (1 << target);
+
+    for i in 0..state.len() {
+        if i & mask == mask {
+            let s1 = i;
+            let s0 = s1 - distance;
+            u_apply_target(state_re, state_im, &g, s0, s1);
+        }
+    }
+}
+
 fn bit_flip_noise_apply(state: &mut State, prob: Float, target: usize) -> bool {
     let mut rng = rand::thread_rng();
     let epsilon: Float = rng.gen();
@@ -1408,9 +1452,8 @@ mod tests {
             apply(Gate::RZ(1.0), &mut state, i);
         }
 
-        for i in 0..n - 1 {
-            let (p0, p1) = pairs[i];
-            c_apply(Gate::X, &mut state, p0, p1);
+        for (p0, p1) in pairs.iter().take(n - 1) {
+            c_apply(Gate::X, &mut state, *p0, *p1);
         }
 
         for _ in 0..9 {
@@ -1420,9 +1463,8 @@ mod tests {
                 apply(Gate::RZ(1.0), &mut state, i);
             }
 
-            for i in 0..n - 1 {
-                let (p0, p1) = pairs[i];
-                c_apply(Gate::X, &mut state, p0, p1);
+            for (p0, p1) in pairs.iter().take(n - 1) {
+                c_apply(Gate::X, &mut state, *p0, *p1);
             }
         }
 
@@ -2097,5 +2139,46 @@ mod tests {
         assert_float_closeness(state1.reals[1], state0.reals[0], 0.00001);
         assert_float_closeness(state1.imags[0], state0.imags[1], 0.00001);
         assert_float_closeness(state1.imags[1], state0.imags[0], 0.00001);
+    }
+
+    #[test]
+    fn controlled_u() {
+        const N: usize = 3;
+        let mut state = State::new(N);
+
+        for target in 0..N {
+            h_apply(&mut state, target);
+        }
+        u_c_apply(&mut state, 1.0, 2.0, 3.0, 0, 1);
+
+        let expected_reals = [
+            0.35355339, 0.47807852, 0.35355339, 0.01747458, 0.35355339, 0.47807852, 0.35355339,
+            0.01747458,
+        ];
+        let expected_imags = [
+            0.0,
+            -0.0239202,
+            0.0,
+            -0.14339942,
+            0.0,
+            -0.0239202,
+            0.0,
+            -0.14339942,
+        ];
+
+        state
+            .reals
+            .iter()
+            .zip(expected_reals.iter())
+            .for_each(|(actual, expected)| {
+                assert_float_closeness(*actual, *expected, 0.00001);
+            });
+        state
+            .imags
+            .iter()
+            .zip(expected_imags.iter())
+            .for_each(|(actual, expected)| {
+                assert_float_closeness(*actual, *expected, 0.00001);
+            });
     }
 }

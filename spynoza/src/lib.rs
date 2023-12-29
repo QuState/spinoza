@@ -290,6 +290,11 @@ impl QuantumCircuit {
     }
 
     #[inline]
+    pub fn cu(&mut self, theta: Float, phi: Float, lambda: Float, control: usize, target: usize) {
+        self.qc.cu(theta, phi, lambda, control, target);
+    }
+
+    #[inline]
     pub fn cp(&mut self, angle: Float, control: usize, target: usize) {
         self.qc.cp(angle, control, target)
     }
@@ -301,28 +306,33 @@ impl QuantumCircuit {
 
     #[inline]
     pub fn cry(&mut self, angle: Float, control: usize, target: usize) {
-        self.qc.cry(angle, control, target)
+        self.qc.cry(angle, control, target);
     }
 
     // #[inline]
     pub fn crz(&mut self, angle: Float, control: usize, target: usize) {
-        self.qc.crz(angle, control, target)
+        self.qc.crz(angle, control, target);
     }
 
     // Special gates
     #[inline]
     pub fn measure(&mut self, target: usize) {
-        self.qc.measure(target)
+        self.qc.measure(target);
     }
 
     #[inline]
     pub fn swap(&mut self, t0: usize, t1: usize) {
-        self.qc.swap(t0, t1)
+        self.qc.swap(t0, t1);
     }
 
     #[inline]
     pub fn iqft(&mut self, targets: Vec<usize>) {
-        self.qc.iqft(&targets)
+        self.qc.iqft(&targets);
+    }
+
+    #[inline]
+    pub fn bit_flip_noise(&mut self, prob: Float, target: usize) {
+        self.qc.bit_flip_noise(prob, target);
     }
 
     #[inline]

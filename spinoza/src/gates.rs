@@ -190,7 +190,19 @@ impl Gate {
     }
 }
 
-/// Single Target, No Controls
+/// Apply a transformation to a single target qubit, with no control(s).
+///
+/// # Examples
+/// ```
+/// use spinoza::{gates::{apply, Gate}, core::State};
+///
+/// let n = 3;
+/// let mut state = State::new(n);
+///
+/// for t in 0..n {
+///     apply(Gate::H, &mut state, t);
+/// }
+/// ```
 pub fn apply(gate: Gate, state: &mut State, target: usize) {
     match gate {
         Gate::H => h_apply(state, target),
@@ -210,7 +222,20 @@ pub fn apply(gate: Gate, state: &mut State, target: usize) {
     }
 }
 
-/// Single Control, Single Target
+/// Apply a transformation to a single target qubit, with a single control.
+///
+/// # Examples
+/// ```
+/// use spinoza::{gates::{c_apply, Gate}, core::State};
+///
+/// let n = 3;
+/// let mut state = State::new(n);
+///
+/// let pairs: Vec<(usize, usize)> = (0..n).map(|i| (i, (i +1) % n)).collect();
+/// for (control, target) in pairs.iter() {
+///     c_apply(Gate::H, &mut state, *control, *target);
+/// }
+/// ```
 pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
     match gate {
         Gate::H => h_c_apply(state, control, target),
@@ -233,7 +258,17 @@ pub fn cc_apply(gate: Gate, state: &mut State, control0: usize, control1: usize,
     }
 }
 
-/// Multiple Controls, Single Target
+/// Apply a transformation to a single target qubit, with multiple controls.
+///
+/// # Examples
+/// ```
+/// use spinoza::{gates::{mc_apply, Gate}, core::State};
+///
+/// let n = 3;
+/// let mut state = State::new(n);
+///
+/// mc_apply(Gate::P(3.14), &mut state, &[0, 1], None, 2);
+/// ```
 pub fn mc_apply(
     gate: Gate,
     state: &mut State,

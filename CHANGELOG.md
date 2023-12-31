@@ -1,20 +1,53 @@
 # CHANGELOG
 
-## 0.5.0
+## [0.5.0] - 2023-12-31
 
-### (Minor) Breaking changes
-*Since Spinoza is pre `v1.0.0`, and under heavy ...*
+### Breaking Changes
 
+- **Updated Gate Enum:**
+  - The `Gate` enum has undergone breaking changes for improved usability and clarity:
+    - Removed tuple parameters from `SWAP` gate; it now takes two separate `usize` parameters.
+    - Removed tuple parameters from `U` gate; it now takes three separate `Float` parameters.
+    - Added a new gate: `BitFlipNoise(Float)` for simulating a bit flip based on the provided probability.
 
-### New features
+### New Features
 
-- Add the controlled Hadamard gate.
-- Add the controlled Rz gate.
-- Add functions to compute expectation value:
-  - `xyz_expectation_value` can take any of the operators, `X, Y, Z`, and
-  return the expectation value.
-  - `qubit_expectation_value` is a special case that offers better performance when
-  computing the expectation value of `Z` in the state.
+- **Controlled Hadamard Gate:**
+  - Addition of the controlled Hadamard gate for enhanced quantum circuit design.
+
+- **Controlled Rz Gate:**
+  - Addition of the controlled Rz gate to broaden the range of available quantum gates.
+
+- **Controlled U Gate:**
+  - Addition of the controlled U gate, allowing controlled application of a general single-qubit rotation.
+
+- **Expectation Value Functions:**
+  - **`xyz_expectation_value`:**
+    - New function allowing computation of expectation value for any of the operators `X, Y, Z`.
+  - **`qubit_expectation_value`:**
+    - Specialized function, for improved performance, to compute the expectation value of `Z` in the state.
+
+### Other Changes
+
+- Improved Documentation:
+  - Enhanced documentation for new features and functions to assist users in integrating them into their projects.
+
+### Deprecated
+
+- None
+
+### Removed
+
+- None
+
+### Fixed
+
+- None
+
+### Notes for Developers
+
+- Developers should be aware that breaking changes have been introduced to the `Gate` enum in this release. Please 
+  review and update your code accordingly. Breaking changes will not result in a major version increment until `v1.0.0`.
 
 ## 0.4.0
 

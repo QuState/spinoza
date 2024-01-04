@@ -37,7 +37,7 @@ def quantum_lstm():
         qc.u(alpha, beta, gamma, target)
 
     qc.execute()
-    return qc.get_statevector()
+    return qc.state_vector
 
 
 if __name__ == "__main__":

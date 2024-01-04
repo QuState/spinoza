@@ -73,11 +73,7 @@ mod tests {
         let config = Config::global();
         assert_eq!(
             config.threads,
-            std::thread::available_parallelism()
-                .unwrap()
-                .get()
-                .try_into()
-                .expect("Too much power")
+            u32::try_from(std::thread::available_parallelism().unwrap().get()).unwrap()
         );
         assert_eq!(config.qubits, 0);
         assert!(!config.print);

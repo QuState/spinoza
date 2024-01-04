@@ -15,7 +15,7 @@ def value_encoding(n, v):
     qc.iqft(range(n)[::-1])
 
     qc.execute()
-    return qc.get_statevector()
+    return qc.state_vector
 
 
 if __name__ == "__main__":

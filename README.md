@@ -1,20 +1,20 @@
 <p align="center">
   <!-- Tests -->
   <a href="https://github.com/QuState/spinoza/actions/workflows/rust.yml">
-    <img src="https://img.shields.io/github/actions/workflow/status/PennyLaneAI/PennyLane/tests.yml?branch=master&style=flat-square" />
+    <img src="https://img.shields.io/github/actions/workflow/status/PennyLaneAI/PennyLane/tests.yml?branch=master&style=flat-square"  alt=""/>
   </a>
   <!-- CodeCov -->
   <a href="https://app.codecov.io/gh/QuState/spinoza">
-    <img src="https://img.shields.io/codecov/c/github/QuState/spinoza?style=flat-square&logo=codecov" />
+    <img src="https://img.shields.io/codecov/c/github/QuState/spinoza?style=flat-square&logo=codecov"  alt=""/>
   </a>
   <!-- Docs -->
   <a href="https://qustate.github.io/spinoza">
-    <img src="https://img.shields.io/badge/docs-passing-brightgreen" />
+    <img src="https://img.shields.io/badge/docs-passing-brightgreen"  alt=""/>
   </a>
 </p>
 
 <p align="center">
-<img src="assets/logo.png" width="400">
+<img src="assets/logo.png" width="400" alt="">
 </p>
 
 Spinoza is a fast and flexible quantum simulator written exclusively in Rust,
@@ -28,6 +28,12 @@ develoers a simple, flexible, and fast tool for classical simulation. For more
 information, please see the accompanying
 [paper](https://arxiv.org/pdf/2303.01493.pdf).
 
+## Quickstart with Python
+
+```bash
+pip install git+https://github.com/QuState/spinoza#subdirectory=spynoza
+```
+
 ## Getting Started
 
 ### Prerequisites
@@ -39,7 +45,7 @@ rustup toolchain install nightly
 rustup default nightly
 ```
 ### Building on *nix
-> [!NOTE] 
+> [!NOTE]
 > before building on macOS, please see the [install guide](INSTALL.md).
 
 #### Production

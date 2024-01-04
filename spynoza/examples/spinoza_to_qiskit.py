@@ -147,14 +147,14 @@ def spynoza_to_qiskit(register_sizes: list[int], transformations: list[PyQuantum
 def main() -> None:
     """Entry point..."""
     qc_spynoza = simple_spynoza(2)
-    transformations = qc_spynoza.get_transformations()
+    transformations = qc_spynoza.transformations
     reg_sizes = qc_spynoza.register_sizes
 
     qc = spynoza_to_qiskit(reg_sizes, transformations)
     print(qc.draw(output="text"))
 
     qc_spynoza = all_gates_spynoza()
-    transformations = qc_spynoza.get_transformations()
+    transformations = qc_spynoza.transformations
     reg_sizes = qc_spynoza.register_sizes
     qc = spynoza_to_qiskit(reg_sizes, transformations)
     print(qc.draw(output="text"))

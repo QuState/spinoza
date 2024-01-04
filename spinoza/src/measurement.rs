@@ -5,7 +5,7 @@ use rayon::prelude::*;
 use crate::{
     core::State,
     gates::{apply, Gate},
-    math::{modulus, Float},
+    math::Float,
 };
 
 /// Single qubit measurement
@@ -18,14 +18,12 @@ pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u8
         .par_chunks_exact(chunk_size)
         .zip_eq(state.imags.par_chunks_exact(chunk_size))
         .map(|(reals_chunk, imags_chunk)| {
-            let (reals_s0, _reals_s1) = reals_chunk.split_at(dist);
-            let (imags_s0, _imags_s1) = imags_chunk.split_at(dist);
-
-            reals_s0
+            reals_chunk
                 .par_iter()
-                .zip_eq(imags_s0.par_iter())
+                .take(dist)
+                .zip_eq(imags_chunk.par_iter().take(dist))
                 .with_min_len(1 << 16)
-                .map(|(re_s0, im_s0)| modulus(*re_s0, *im_s0).powi(2))
+                .map(|(re_s0, im_s0)| re_s0.powi(2) + im_s0.powi(2))
                 .sum::<Float>()
         })
         .sum::<Float>();
@@ -53,6 +51,7 @@ pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u8
                     .zip_eq(reals_s1.par_iter_mut())
                     .zip_eq(imags_s0.par_iter_mut())
                     .zip_eq(imags_s1.par_iter_mut())
+                    .with_min_len(1 << 16)
                     .for_each(|(((re_s0, re_s1), im_s0), im_s1)| {
                         *re_s0 *= prob0_sqrt_recip;
                         *im_s0 *= prob0_sqrt_recip;
@@ -77,6 +76,7 @@ pub fn measure_qubit(state: &mut State, target: usize, reset: bool, v: Option<u8
                     .zip_eq(reals_s1.par_iter_mut())
                     .zip_eq(imags_s0.par_iter_mut())
                     .zip_eq(imags_s1.par_iter_mut())
+                    .with_min_len(1 << 16)
                     .for_each(|(((re_s0, re_s1), im_s0), im_s1)| {
                         *re_s1 *= prob1_sqrt_recip;
                         *im_s1 *= prob1_sqrt_recip;
@@ -105,7 +105,7 @@ mod tests {
             .reals
             .iter()
             .zip(state.imags.iter())
-            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .map(|(re, im)| re.powi(2) + im.powi(2))
             .sum();
         assert_float_closeness(sum, 1.0, 0.001);
 
@@ -115,7 +115,7 @@ mod tests {
             .reals
             .iter()
             .zip(state.imags.iter())
-            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .map(|(re, im)| re.powi(2) + im.powi(2))
             .sum();
         assert_float_closeness(sum, 1.0, 0.001);
 
@@ -125,7 +125,7 @@ mod tests {
             .reals
             .iter()
             .zip(state.imags.iter())
-            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .map(|(re, im)| re.powi(2) + im.powi(2))
             .sum();
         assert_float_closeness(sum, 1.0, 0.001);
 
@@ -135,7 +135,7 @@ mod tests {
             .reals
             .iter()
             .zip(state.imags.iter())
-            .map(|(re, im)| modulus(*re, *im).powi(2))
+            .map(|(re, im)| re.powi(2) + im.powi(2))
             .sum();
 
         assert_float_closeness(sum, 1.0, 0.001);

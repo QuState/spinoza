@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## [0.5.1] - 2024-01-04
+
+### Performance Improvements
+
+- **Measurement**:
+    - Improved performance of measurement by almost 50% in certain cases. Rayon will no longer
+    splitting the iterator when the number of qubits is low (i.e., when # of qubits < 16).
+    - Improved performance by removing superfluous instructions. Replaced
+    modulus and squaring with direct computation for efficiency.
+
+### Code Refactoring
+
+- Streamlined the implementation of measure_qubit by utilizing the `take` iterator.
+
+### Fixed
+
+- Fixed spynoza examples to align with API changes introduced in v0.5.0.
+- Resolved an issue with a configuration test.
+
+### Other Changes
+
+- Update clap to 4.4.13
+- Update pyo3 to 0.20.2
+
 ## [0.5.0] - 2023-12-31
 
 ### Breaking Changes

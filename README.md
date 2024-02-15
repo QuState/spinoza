@@ -24,7 +24,7 @@ principle being that a single-qubit gate applied to a target qubit preserves
 the probability of pairs of amplitudes corresponding to measurement outcomes
 that differ only in the target qubit. Spinoza is intended to enable the
 development of quantum computing solutions by offering researchers and quantum
-develoers a simple, flexible, and fast tool for classical simulation. For more
+developers a simple, flexible, and fast tool for classical simulation. For more
 information, please see the accompanying
 [paper](https://arxiv.org/pdf/2303.01493.pdf).
 

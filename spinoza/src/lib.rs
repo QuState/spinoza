@@ -15,7 +15,7 @@
 //!   - [apply][gates::apply] for quantum transformations that do not need a control (qubit).
 //!   - [c_apply][gates::c_apply] for quantum transformations that have a single control.
 //!   - [mc_apply][gates::mc_apply] for quantum transformation that require multiple controls.
-//! - **Object Oriented** the [QuantumCircuit][circuit::QuantumCircuit] represents a [quantum circuit](https://en.wikipedia.org/wiki/Quantum_circuit).
+//! - **Object-Oriented** the [QuantumCircuit][circuit::QuantumCircuit] represents a [quantum circuit](https://en.wikipedia.org/wiki/Quantum_circuit).
 //!   Using the [QuantumCircuit][circuit::QuantumCircuit] one can create, mutate, and simulate quantum circuits with
 //!   various quantum [gates][gates::Gate], operators, etc.
 //! - **Python Bindings** Spinoza has python bindings named `Spynoza`

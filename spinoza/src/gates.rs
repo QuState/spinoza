@@ -203,6 +203,15 @@ impl Gate {
 ///     apply(Gate::H, &mut state, t);
 /// }
 /// ```
+#[multiversion::multiversion(
+    targets("x86_64+avx512f+avx512bw+avx512cd+avx512dq+avx512vl", // x86_64-v4
+    "x86_64+avx2+fma", // x86_64-v3
+    "x86_64+sse4.2", // x86_64-v2
+    "x86+avx512f+avx512bw+avx512cd+avx512dq+avx512vl",
+    "x86+avx2+fma",
+    "x86+sse4.2",
+    "x86+sse2",
+    ))]
 pub fn apply(gate: Gate, state: &mut State, target: usize) {
     match gate {
         Gate::H => h_apply(state, target),
@@ -236,6 +245,15 @@ pub fn apply(gate: Gate, state: &mut State, target: usize) {
 ///     c_apply(Gate::H, &mut state, *control, *target);
 /// }
 /// ```
+#[multiversion::multiversion(
+    targets("x86_64+avx512f+avx512bw+avx512cd+avx512dq+avx512vl", // x86_64-v4
+    "x86_64+avx2+fma", // x86_64-v3
+    "x86_64+sse4.2", // x86_64-v2
+    "x86+avx512f+avx512bw+avx512cd+avx512dq+avx512vl",
+    "x86+avx2+fma",
+    "x86+sse4.2",
+    "x86+sse2",
+    ))]
 pub fn c_apply(gate: Gate, state: &mut State, control: usize, target: usize) {
     match gate {
         Gate::H => h_c_apply(state, control, target),

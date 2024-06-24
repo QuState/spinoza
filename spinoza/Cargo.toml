@@ -22,6 +22,7 @@ clap = { version = "4.4.13", features = ["derive"] }
 comfy-table = "7.1.0"
 env_logger = "0.10.1"
 evalexpr = "11.3.0"
+multiversion = "0.7.4"
 qasm = "1.0.0"
 rand = "0.8.5"
 rand_distr = "0.4.3"

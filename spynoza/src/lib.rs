@@ -179,7 +179,7 @@ pub struct QuantumCircuit {
 impl QuantumCircuit {
     #[new]
     #[pyo3(signature = (*registers))]
-    pub fn new(registers: &PyTuple) -> Self {
+    pub fn new(registers: Bound<PyTuple>) -> Self {
         let mut regs: Vec<QuantumRegisterRS> = registers
             .into_iter()
             .map(|r| r.extract::<QuantumRegister>().unwrap().qr)
@@ -406,7 +406,7 @@ pub fn run(qc: &mut QuantumCircuit) -> PyResult<PyState> {
 }
 
 #[pymodule]
-fn spynoza(_py: Python, m: &PyModule) -> PyResult<()> {
+fn spynoza(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(get_samples))?;
     m.add_wrapped(wrap_pyfunction!(show_table))?;
     m.add_wrapped(wrap_pyfunction!(run))?;

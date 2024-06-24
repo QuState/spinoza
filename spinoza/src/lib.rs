@@ -1,3 +1,4 @@
+#![feature(avx512_target_feature)]
 //! A High Performance Quantum State Simulator
 //!
 //! Spinoza is a fast and flexible quantum simulator written exclusively in Rust, with bindings available for Python
@@ -20,7 +21,7 @@
 //!   various quantum [gates][gates::Gate], operators, etc.
 //! - **Python Bindings** Spinoza has python bindings named `Spynoza`
 //!   - All functionality for [QuantumCircuit][circuit::QuantumCircuit] and other functions have corresponding bindings
-//!   created using PyO3.
+//!     created using PyO3.
 //!
 //! # Examples
 //! Let's encode the value, 2.4 using the three aforementioned approaches:

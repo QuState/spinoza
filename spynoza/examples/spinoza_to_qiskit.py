@@ -1,6 +1,10 @@
+# Requires:
+#    qiskit>=1.0,<2.0
+#    qiskit-aer~=0.13
 from math import pi
 
-from qiskit import (Aer, QuantumCircuit as QC, QuantumRegister as QR)
+from qiskit import (QuantumCircuit as QC, QuantumRegister as QR)
+from qiskit_aer import Aer
 from spynoza import QuantumRegister, QuantumCircuit, PyQuantumTransformation
 
 # Run the quantum circuit on a statevector simulator backend

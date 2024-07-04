@@ -21,7 +21,7 @@ fn pauli_functional(n: usize, show_results: bool) {
     let elapsed = now.elapsed().as_micros();
     println!("{}", pretty_print_int(elapsed));
     if show_results {
-        to_table(&state);
+        println!("{}", to_table(&state));
     }
 }
 

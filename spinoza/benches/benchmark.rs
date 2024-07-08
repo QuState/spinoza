@@ -44,7 +44,7 @@ fn build_circuit(nqubits: usize, depth: usize, pairs: &[(usize, usize)]) -> Quan
         .collect();
 
     let mut q = QuantumRegister::new(nqubits);
-    let mut circuit = QuantumCircuit::new(&mut q);
+    let mut circuit = QuantumCircuit::new(&mut [&mut q]);
     first_rotation(&mut circuit, nqubits, &mut angles);
     entangler(&mut circuit, pairs);
     for _ in 0..depth {
@@ -131,7 +131,7 @@ fn u_gate(n: usize) {
     let mut state = State::new(n);
 
     for t in 0..n {
-        apply(Gate::U((1.0, 2.0, 3.0)), &mut state, t);
+        apply(Gate::U(1.0, 2.0, 3.0), &mut state, t);
     }
 }
 

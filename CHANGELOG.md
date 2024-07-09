@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Upcoming
+
+### Fixed
+
+- Make sure table gets printed if the flag is passed to print the terminal via the CLI examples (@inmzhang)
+- Fixed compilation errors, due to a breaking API change (since v0.5.0), in the benchmark (@inmzhang)
+
 ## [0.5.1] - 2024-01-04
 
 ### Performance Improvements
